@@ -9,5 +9,7 @@ with open("game.gb", "rb") as game:
 		if byte.toHex() == "CB":
 			byte2 = game.read(1)
 			byte2 = Bin(' '.join(format(ord(x), 'b') for x in byte2), 8)
-			print(byte, byte2)
+			gameboy.execute(byte, byte2)
+		else:
+			gameboy.execute(byte)
 		byte = game.read(1)

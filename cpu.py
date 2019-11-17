@@ -66,5 +66,5 @@ class CPU:
 	def get_HL(self):
 		return (self.registers["H"] << 8) + self.registers["L"]
 
-	def execute(self, instruction):
-		pass
+	def execute(self, instruction, instruction2=None):
+		print(instruction)
