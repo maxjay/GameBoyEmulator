@@ -2,7 +2,7 @@ from binary import Bin
 
 class CPU:
 	def __init__(self):
-		self.Registers = {'A': Bin("000000000"),
+		self.registers = {'A': Bin("000000000"),
 						  'B': Bin("000000000"),
 						  'C': Bin("000000000"),
 						  'D': Bin("000000000"),
@@ -10,32 +10,61 @@ class CPU:
 						  'F': Bin("000000000"),
 						  'H': Bin("000000000"),
 						  'L': Bin("000000000")}
-		self.flagRegister = Bin("11110000")
+		self.programCounter = Bin("0000000000000000")
+		self.stackPointer = Bin("00000000000000000")
+		self.updateFlagRegisters()
+
+	def updateFlagRegisters(self):
+		self.flagRegister = self.registers["F"]
+		self.zeroFlag = self.registers["F"][7]
+		self.opFlag = self.registers["F"][6]
+		self.halfCarryFlag = self.registers["F"][5]
+		self.carryFlag = self.registers["F"][4]
+
+	def setZeroFlag(self, bit):
+		self.registers["F"][7] = bit
+		self.updateFlagRegisters()
+
+	def setOpFlag(self, bit):
+		self.registers["F"][6] = bit
+		self.updateFlagRegisters()
+
+	def setHalfCarryFlag(self, bit):
+		self.registers["F"][5] = bit
+		self.updateFlagRegisters()
+
+	def setCarryFlag(self, bit):
+		self.registers["F"][4] = bit
+		self.updateFlagRegisters()
 
 	def set_AF(self, bin_):
-		self.Registers["A"] = bin_[:8]
-		self.Registers["F"] = bin_[8:]
+		self.registers["A"] = bin_[:8]
+		self.registers["F"] = bin_[8:]
+		self.updateFlagRegisters()
 
 	def set_BC(self, bin_):
-		self.Registers["B"] = bin_[:8]
-		self.Registers["C"] = bin_[8:]
+		self.registers["B"] = bin_[:8]
+		self.registers["C"] = bin_[8:]
 
 	def set_DE(self, bin_):
-		self.Registers["D"] = bin_[:8]
-		self.Registers["E"] = bin_[8:]
+		self.registers["D"] = bin_[:8]
+		self.registers["E"] = bin_[8:]
 
 	def set_HL(self, bin_):
-		self.Registers["H"] = bin_[:8]
-		self.Registers["L"] = bin_[8:]
+		self.registers["H"] = bin_[:8]
+		self.registers["L"] = bin_[8:]
 
 	def get_AF(self):
-		return (self.Registers["A"] << 8) + self.Registers["F"]
+		return (self.registers["A"] << 8) + self.registers["F"]
 
 	def get_BC(self):
-		return (self.Registers["B"] << 8) + self.Registers["C"]
+		return (self.registers["B"] << 8) + self.registers["C"]
 
 	def get_DE(self):
-		return (self.Registers["D"] << 8) + self.Registers["E"]
+		return (self.registers["D"] << 8) + self.registers["E"]
 
 	def get_HL(self):
-		return (self.Registers["H"] << 8) + self.Registers["L"]
+		return (self.registers["H"] << 8) + self.registers["L"]
+
+	def execute(self, instruction):
+		pass

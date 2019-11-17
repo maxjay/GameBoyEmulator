@@ -1,14 +1,45 @@
 class Bin:
+	@staticmethod
+	def hexToBin(string):
+		t = ""
+		for i in string:
+			if i == "A":
+				i = 10
+			elif i == "B":
+				i = 11
+			elif i == "C":
+				i = 12
+			elif i == "D":
+				i = 13
+			elif i == "E":
+				i = 14
+			elif i == "F":
+				i = 15
+			else:
+				i = int(i)
+			r = ""
+			for j in range(4):
+				if 2**(3-j) <= i:
+					r += "1"
+					i = i - 2**(3-j)
+				else:
+					r += "0"
+			t = t + r
+		return Bin(t)
+
 	def __init__(self, value, bitLength = None):
 		self.bitLength = bitLength if bitLength != None else len(value)
 		self.value = value if len(value) == self.bitLength else "0"*(self.bitLength-len(value))+value
 
 	def __getitem__(self, key):
-		return Bin(self.value[self.bitLength - key - 1])
+		if isinstance(key, slice):
+			return Bin(self.value[key])
+		elif isinstance(key, int):
+			return Bin(self.value[self.bitLength - key -1])
 
 	def __setitem__(self, key, value):
-		self[key] = value
-		return self
+		self.value[key] = value
+		return Bin(self.value)
 
 	def toHex(self):
 		string = ""
@@ -137,4 +168,3 @@ class Bin:
 					r = "0" + r
 			carry += 1 if self[i] & other[i] == "1"  else 0
 		return Bin(r)
-
