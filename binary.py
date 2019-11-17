@@ -53,7 +53,7 @@ class Bin:
 			elif a == 11:
 				a = "B"
 			elif a == 12:
-				a == "C"
+				a = "C"
 			elif a == 13:
 				a = "D"
 			elif a == 14:
