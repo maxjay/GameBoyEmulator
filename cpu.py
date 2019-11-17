@@ -1,4 +1,5 @@
 from binary import Bin
+from memory import MemoryBus
 
 class CPU:
 	def __init__(self):
@@ -11,8 +12,9 @@ class CPU:
 						  'H': Bin("000000000"),
 						  'L': Bin("000000000")}
 		self.programCounter = Bin("0000000000000000")
-		self.stackPointer = Bin("00000000000000000")
+		self.stackPointer = Bin.hexToBin("FFFE")
 		self.updateFlagRegisters()
+		self.bus = MemoryBus()
 
 	def updateFlagRegisters(self):
 		self.flagRegister = self.registers["F"]
@@ -67,4 +69,4 @@ class CPU:
 		return (self.registers["H"] << 8) + self.registers["L"]
 
 	def execute(self, instruction, instruction2=None):
-		print(instruction)
+		pass

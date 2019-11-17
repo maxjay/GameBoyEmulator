@@ -1,5 +1,16 @@
 class Bin:
 	@staticmethod
+	def decToBin(a, bitLength=8):
+		r = ""
+		for i in range(bitLength):
+			if 2**(bitLength-1-i) <= a:
+				r += "1"
+				a =  a - 2**(bitLength-1-i)
+			else:
+				r += "0"
+		return Bin(r)
+
+	@staticmethod
 	def hexToBin(string):
 		t = ""
 		for i in string:
@@ -65,6 +76,13 @@ class Bin:
 			string += a
 		return string
 
+	def toDec(self):
+		a = 0
+		for i in range(self.bitLength):
+			if self.value[i] == "1":
+				a += 2**(self.bitLength - i - 1)
+		return a
+
 	def __lshift__(self, other):
 		return Bin(self.value + "0"*other)
 
@@ -111,6 +129,13 @@ class Bin:
 			else:
 				r = "0" + r
 		return Bin(r)
+
+	@staticmethod
+	def overflowing_add(a, b):
+		if a[a.bitLength - 1] == b[b.bitLength -1] == "1":
+			return 1, a+b
+		else:
+			return 0, a+b
 
 	def __invert__(self):
 		r = ""
