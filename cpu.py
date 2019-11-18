@@ -1,6 +1,10 @@
 from binary import Bin
 from memory import MemoryBus
 
+class UnknownInstruction(Exception):
+	def __init__(self, instruction, address):
+		self.code = "Unknown Instruction: {0}     Address: {1}".format(instruction, address.toHex())
+
 class CPU:
 	def __init__(self):
 		self.registers = {'A': Bin("000000000"),
@@ -11,7 +15,7 @@ class CPU:
 						  'F': Bin("000000000"),
 						  'H': Bin("000000000"),
 						  'L': Bin("000000000")}
-		self.programCounter = Bin("0000000000000000")
+		self.programCounter = Bin.hexToBin("0100")
 		self.stackPointer = Bin.hexToBin("FFFE")
 		self.updateFlagRegisters()
 		self.bus = MemoryBus()
@@ -68,5 +72,54 @@ class CPU:
 	def get_HL(self):
 		return (self.registers["H"] << 8) + self.registers["L"]
 
-	def execute(self, instruction, instruction2=None):
-		pass
+	def pushToStack(self, bin_):
+		self.bus[self.stackPointer] = bin_
+		self.stackPointer += 1
+
+	def execute(self, instruction):
+		hexCode = instruction.toHex()
+		if hexCode == "00":
+			self.programCounter += 1
+		elif hexCode == "C3":
+			in2	= self.bus[self.programCounter + 1]
+			in3 = self.bus[self.programCounter + 2]
+			jumpTo = (in3 << 8) + in2
+			self.programCounter = jumpTo
+		elif hexCode == "0C":
+			self.registers["C"] += 1
+			self.programCounter += 1
+		elif hexCode == "02":
+			self.set_BC(self.registers["A"])
+			self.programCounter += 1
+		elif hexCode == "CD":
+			in2 = self.bus[self.programCounter + 1]
+			in3 = self.bus[self.programCounter + 2]
+			callTo = (in3 << 8) + in2
+			self.pushToStack(callTo)
+			self.programCounter = callTo
+		elif hexCode == "AF":
+			self.registers["A"] = self.registers["A"] ^ self.registers["A"]
+			self.programCounter += 1
+		elif hexCode == "21":
+			in2 = self.bus[self.programCounter + 1]
+			in3 = self.bus[self.programCounter + 2]
+			self.set_HL((in3 << 8) + in2)
+			self.programCounter += 3
+		elif hexCode == "0E":
+			in2 = self.bus[self.programCounter + 1]
+			self.registers["C"] = in2
+			self.programCounter += 2
+		elif hexCode == "06":
+			in2 = self.bus[self.programCounter + 1]
+			self.registers["B"]	= in2
+			self.programCounter += 2
+		elif hexCode == "32":
+			self.set_HL(self.registers["A"])
+			self.zeroFlag = Bin("1") if self.get_HL - 1 == Bin("0") else Bin("0")
+			#Add subtract method, get carry for half nibble?
+		else:
+			raise UnknownInstruction(hexCode, self.programCounter)
+
+	def step(self):
+		byte = self.bus[self.programCounter]
+		self.execute(byte)

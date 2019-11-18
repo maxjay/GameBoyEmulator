@@ -173,6 +173,8 @@ class Bin:
 		return self.value
 
 	def __add__(self, other):
+		if isinstance(other, int):
+			other = self.decToBin(other)
 		if self.bitLength > other.bitLength:
 			other = other >> (self.bitLength - other.bitLength)
 		elif self.bitLength < other.bitLength:
@@ -193,3 +195,13 @@ class Bin:
 					r = "0" + r
 			carry += 1 if self[i] & other[i] == "1"  else 0
 		return Bin(r)
+
+	def __sub__(self, other):
+		if isinstance(other, int):
+			other = self.decToBin(other)
+		if self.bitLength > other.bitLength:
+			other = other >> (self.bitLength - other.bitLength)
+		elif self.bitLength < other.bitLength:
+			self = self >> (other.bitLength - self.bitLength)
+		r = ""
+		#finish

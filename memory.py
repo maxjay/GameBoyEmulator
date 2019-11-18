@@ -16,3 +16,13 @@ class MemoryBus():
 		else:
 			self.memory[key] = value
 		return self.memory
+
+	def loadROM(self, file):
+		with open(file, "rb") as file:
+			byte = file.read(1)
+			counter = 0
+			while byte != "":
+				byte = Bin(" ".join(format(ord(x), 'b') for x in byte), 8)
+				self.memory[counter] = byte
+				counter += 1
+				byte = file.read(1)
