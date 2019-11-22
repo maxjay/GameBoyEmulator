@@ -103,6 +103,7 @@ class Bin:
 		return Bin(r)
 
 	def __or__(self, other):
+		print("or")
 		if self.bitLength > other.bitLength:
 			other = other >> (self.bitLength - other.bitLength)
 		elif self.bitLength < other.bitLength:
@@ -111,8 +112,8 @@ class Bin:
 		for i in range(self.bitLength):
 			if self[i] == "1":
 				r = "1" + r
-			elif other.value[i] == "1":
-				r = "1 + r"
+			elif other[i] == "1":
+				r = "1" + r
 			else:
 				r = "0" + r
 		return Bin(r)
@@ -141,9 +142,9 @@ class Bin:
 		r = ""
 		for i in self.value:
 			if i == "1":
-				r = "0" + r
+				r += "0"
 			else:
-				r = "1" + r
+				r += "1"
 		return Bin(r)
 
 	def __ne__(self, other):
@@ -203,5 +204,6 @@ class Bin:
 			other = other >> (self.bitLength - other.bitLength)
 		elif self.bitLength < other.bitLength:
 			self = self >> (other.bitLength - self.bitLength)
-		r = ""
-		#finish
+		other = ~other;
+		other = other + Bin("1")
+		return other + self
