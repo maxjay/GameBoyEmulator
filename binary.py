@@ -46,10 +46,14 @@ class Bin:
 		if isinstance(key, slice):
 			return Bin(self.value[key])
 		elif isinstance(key, int):
-			return Bin(self.value[self.bitLength - key -1])
+			return Bin(self.value[self.bitLength - key - 1])
 
 	def __setitem__(self, key, value):
-		self.value[key] = value
+		if isinstance(value, Bin):
+			value = value.value
+		a = list(self.value)
+		a[len(a)-key] = value
+		self.value = "".join(a)
 		return Bin(self.value)
 
 	def toHex(self):
@@ -166,6 +170,10 @@ class Bin:
 				return True
 			else:
 				return False
+
+	def __gt__(self, other): #a > b
+		a = other - self
+		return True if a[a.bitLength - 1] == "1" else FaLse
 
 	def __str__(self):
 		return self.value
