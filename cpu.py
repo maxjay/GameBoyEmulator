@@ -33,7 +33,6 @@ class CPU:
 		self.updateFlagRegisters()
 		print(self.flagRegister, "--")
 
-
 	def setOpFlag(self, bit):
 		self.registers["F"][7] = bit
 		self.updateFlagRegisters()
@@ -142,8 +141,11 @@ class CPU:
 			self.programCounter += 1
 		elif hexCode == "20":
 			in2 = self.bus[self.programCounter + 1]
-			if self.zeroFlag == "0":
-				self.programCounter += in2
+			self.programCounter += 2
+			print(self.programCounter, in2, self.programCounter + in2)
+			print(in2)
+			if self.zeroFlag == Bin("0"):
+				self.programCounter = in2
 			else:
 				self.programCounter += 2
 		elif hexCode == "1D":

@@ -165,6 +165,9 @@ class Bin:
 		if isinstance(other, str):
 			if other == self.value:
 				return True
+		elif isinstance(other, int):
+			other = Bin(str(other), 8)
+			self.__eq__(self, other)
 		else:
 			if other.value == self.value:
 				return True
