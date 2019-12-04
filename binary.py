@@ -38,6 +38,21 @@ class Bin:
 			t = t + r
 		return Bin(t)
 
+	@staticmethod
+	def signedAdd(a, b):
+		if a.bitLength > b.bitLength:
+			b = b.signExtend(b, a.bitLength-b.bitLength)
+		if b.bitLength > a.bitLength:
+			a = a.signExtend(a, b.bitLength-a.bitLength)
+		return a + b
+
+	@staticmethod
+	def signExtend(other, value=8):
+		if other[other.bitLength -1] == "1":
+			return Bin("1"*value + other.value)
+		else:
+			return Bin("0"*value + other.value)
+
 	def __init__(self, value, bitLength = None):
 		self.bitLength = bitLength if bitLength != None else len(value)
 		self.value = value if len(value) == self.bitLength else "0"*(self.bitLength-len(value))+value

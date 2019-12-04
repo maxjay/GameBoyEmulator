@@ -28,10 +28,8 @@ class CPU:
 		self.flagRegister = self.registers["F"]
 
 	def setZeroFlag(self, bit):
-		print(self.flagRegister, "--")
 		self.registers["F"][8] = bit
 		self.updateFlagRegisters()
-		print(self.flagRegister, "--")
 
 	def setOpFlag(self, bit):
 		self.registers["F"][7] = bit
@@ -100,14 +98,11 @@ class CPU:
 			self.pushToStack(callTo)
 			self.programCounter = callTo
 		elif hexCode == "AF":
-			print(self.flagRegister)
 			self.registers["A"] = self.registers["A"] ^ self.registers["A"]
 			self.setZeroFlag(Bin("1") if self.registers["A"] == Bin("0", 8) else Bin("0"))
-			print(self.flagRegister)
 			self.setOpFlag(Bin("0"))
 			self.setCarryFlag(Bin("0"))
 			self.setHalfCarryFlag(Bin("0"))
-			print(self.flagRegister)
 			self.programCounter += 1
 		elif hexCode == "21":
 			in2 = self.bus[self.programCounter + 1]
@@ -142,10 +137,8 @@ class CPU:
 		elif hexCode == "20":
 			in2 = self.bus[self.programCounter + 1]
 			self.programCounter += 2
-			print(self.programCounter, in2, self.programCounter + in2)
-			print(in2)
 			if self.zeroFlag == Bin("0"):
-				self.programCounter = in2
+				self.programCounter = Bin.signedAdd(self.programCounter, in2)
 			else:
 				self.programCounter += 2
 		elif hexCode == "1D":
