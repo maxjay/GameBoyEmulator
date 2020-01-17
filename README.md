@@ -11,6 +11,7 @@ The cpu utilises a fetch-decode-execution loop style.
 
 
 CPU Registers:
+```
 REGISTER | PURPOSE | 16Bit
 --- | --- | ---
 A | ACCUMULATOR | AF
@@ -23,15 +24,17 @@ H | POINTER | HL
 L | POINTER | HL
 SP | STACK POINTER | -
 PC | PROGRAM COUNTER | -
+```
 
 Flags:
+```
 FLAG | BIT POS | DESC
 --- | --- | ---
 Z | 7 | ZERO FLAG (IF RESULT == 0: 1)
 S | 6 | SUBTRACTION FLAG (IF OP == SUB: 1)
 H | 5 | HALF CARRY FLAG (IF CARRY FROM BIT 3 TO 4: 1)
 C | 4 | CARRY FLAG (IF CARRY FROM BIT 7: 1) [OVERFLOW]
-
+```
 Memory Config:
 	-	0x000 - 0x7FFF		: Program Data
 		-	0x000 - 0x0FF	: Destination Address for RTS instructions and interrupts
