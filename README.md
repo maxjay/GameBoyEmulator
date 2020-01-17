@@ -90,4 +90,4 @@ All functions that return a result, excluding decimal and hex conversions, will 
 a class of itself. If a specific bit is requested, a binary class representing that bit
 is returned. 
 
-The ALU
+This library is extended to 16 bit with the class Bin16()

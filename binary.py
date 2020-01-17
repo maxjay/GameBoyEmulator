@@ -1,235 +1,286 @@
-class Bin:
-	@staticmethod
-	def decToBin(a, bitLength=8):
-		r = ""
-		for i in range(bitLength):
-			if 2**(bitLength-1-i) <= a:
-				r += "1"
-				a =  a - 2**(bitLength-1-i)
-			else:
-				r += "0"
-		return Bin(r)
+#!/usr/bin/python3
 
-	@staticmethod
-	def hexToBin(string):
-		t = ""
-		for i in string:
-			if i == "A":
-				i = 10
-			elif i == "B":
-				i = 11
-			elif i == "C":
-				i = 12
-			elif i == "D":
-				i = 13
-			elif i == "E":
-				i = 14
-			elif i == "F":
-				i = 15
-			else:
-				i = int(i)
-			r = ""
-			for j in range(4):
-				if 2**(3-j) <= i:
-					r += "1"
-					i = i - 2**(3-j)
-				else:
-					r += "0"
-			t = t + r
-		return Bin(t)
-
-	@staticmethod
-	def signedAdd(a, b):
-		if a.bitLength > b.bitLength:
-			b = b.signExtend(b, a.bitLength-b.bitLength)
-		if b.bitLength > a.bitLength:
-			a = a.signExtend(a, b.bitLength-a.bitLength)
-		return a + b
-
-	@staticmethod
-	def signExtend(other, value=8):
-		if other[other.bitLength -1] == "1":
-			return Bin("1"*value + other.value)
-		else:
-			return Bin("0"*value + other.value)
-
-	def __init__(self, value, bitLength = None):
-		self.bitLength = bitLength if bitLength != None else len(value)
-		self.value = value if len(value) == self.bitLength else "0"*(self.bitLength-len(value))+value
-
-	def __getitem__(self, key):
-		if isinstance(key, slice):
-			return Bin(self.value[key])
-		elif isinstance(key, int):
-			return Bin(self.value[self.bitLength - key - 1])
-
-	def __setitem__(self, key, value):
-		if isinstance(value, Bin):
-			value = value.value
-		a = list(self.value)
-		a[len(a)-key] = value
-		self.value = "".join(a)
-		return Bin(self.value)
-
-	def toHex(self):
-		string = ""
-		for i in range(self.bitLength//4):
-			a = 0
-			for j in range(4):
-				if self.value[(i*4)+j] == "1":
-					a += 2**(3-j)
-			if a == 10:
-				a = "A"
-			elif a == 11:
-				a = "B"
-			elif a == 12:
-				a = "C"
-			elif a == 13:
-				a = "D"
-			elif a == 14:
-				a = "E"
-			elif a == 15:
-				a = "F"
-			else:
-				a = str(a)
-			string += a
-		return string
-
-	def toDec(self):
-		a = 0
-		for i in range(self.bitLength):
-			if self.value[i] == "1":
-				a += 2**(self.bitLength - i - 1)
-		return a
-
-	def __lshift__(self, other):
-		return Bin(self.value + "0"*other)
-
-	def __rshift__(self, other):
-		return Bin("0"*other + self.value)
-
-	def __xor__(self, other):
-		if self.bitLength > other.bitLength:
-			other = other >> (self.bitLength - other.bitLength)
-		elif self.bitLength < other.bitLength:
-			self = self >> (other.bitLength - self.bitLength)
-		r = ""
-		for i in range(self.bitLength):
-			if self[i] != other[i]:
-				r = "1" + r
-			else:
-				r = "0" + r
-		return Bin(r)
-
-	def __or__(self, other):
-		print("or")
-		if self.bitLength > other.bitLength:
-			other = other >> (self.bitLength - other.bitLength)
-		elif self.bitLength < other.bitLength:
-			self = self >> (other.bitLength - self.bitLength)
-		r = ""
-		for i in range(self.bitLength):
-			if self[i] == "1":
-				r = "1" + r
-			elif other[i] == "1":
-				r = "1" + r
-			else:
-				r = "0" + r
-		return Bin(r)
-
-	def __and__(self, other):
-		if self.bitLength > other.bitLength:
-			other = other >> (self.bitLength - other.bitLength)
-		elif self.bitLength < other.bitLength:
-			self = self >> (other.bitLength - self.bitLength)
-		r = ""
-		for i in range(self.bitLength):
-			if self[i] == other[i] == "1":
-				r = "1" + r
-			else:
-				r = "0" + r
-		return Bin(r)
-
-	@staticmethod
-	def overflowing_add(a, b):
-		if a[a.bitLength - 1] == b[b.bitLength -1] == "1":
-			return 1, a+b
-		else:
-			return 0, a+b
-
-	def __invert__(self):
-		r = ""
-		for i in self.value:
-			if i == "1":
-				r += "0"
-			else:
-				r += "1"
-		return Bin(r)
-
-	def __ne__(self, other):
-		if isinstance(other, str):
-				if other == self.value:
-					return False
-		else:
-			if other.value == self.value:
-				return False
-			else:
-				return True
-
-	def __eq__(self, other):
-		if isinstance(other, str):
-			if other == self.value:
-				return True
-		elif isinstance(other, int):
-			other = Bin(str(other), 8)
-			self.__eq__(self, other)
-		else:
-			if other.value == self.value:
-				return True
-			else:
-				return False
-
-	def __gt__(self, other): #a > b
-		a = other - self
-		return True if a[a.bitLength - 1] == "1" else FaLse
-
-	def __str__(self):
-		return self.value
+class Bin():
+	def __init__(self, value=None):
+		self.array = [0,0,0,0,0,0,0,0]
+		if value != None:
+			if type(value) == str:
+				if len(value) == 8:
+					self.array = [0 if i == "0" else 1 for i in value]
+				elif len(value) == 2:
+					self.array = Bin.fromHex(value).array
+			elif type(value) == list:
+				self.array = value
 
 	def __repr__(self):
-		return self.value
+		return self.__str__()
+
+	def __getitem__(self, index):
+		if type(index) == int:
+			return self.array[7-index]
+
+	def __setitem__(self, index, val):
+		if type(index) == int:
+			self.array[7-index] = val
+		return self
+
+	def __str__(self):
+		return "".join([str(i) for i in self.array])
+
+	def __xor__(self, other):
+		return Bin([1 if self.array[i] != other.array[i] else 0 for i in range(8)])
+
+	def __and__(self, other):
+		return Bin([1 if self.array[i] == other.array[i] == 1 else 0 for i in range(8)])
+
+	def __or__(self, other):
+		return Bin([1 if (self.array[i] == 1) or (other.array[i] == 1) else 0 for i in range(8)])
+
+	def __invert__(self):
+		return Bin([0 if i == 1 else 1 for i in self.array])
+
+	def __lshift__(self, a):
+		for i in range(a):
+			self.array.pop(0)
+			self.array.append(0)
+		return self
+
+	def __rshift__(self, a):
+		for i in range(a):
+			self.array.pop()
+			self.array.insert(0, 0)
+		return self
 
 	def __add__(self, other):
-		if isinstance(other, int):
-			other = self.decToBin(other)
-		if self.bitLength > other.bitLength:
-			other = other >> (self.bitLength - other.bitLength)
-		elif self.bitLength < other.bitLength:
-			self = self >> (other.bitLength - self.bitLength)
-		r = ""
-		carry = 0
-		for i in range(self.bitLength):
-			if carry:
-				if self[i] ^ other[i] == "1":
-					r = "0" + r
-				else:
-					r = "1" + r
-					carry = 0
-			else:
-				if self[i] ^ other[i] == "1":
-					r = "1" + r
-				else:
-					r = "0" + r
-			carry += 1 if self[i] & other[i] == "1"  else 0
-		return Bin(r)
+		if type(other) == int:
+			other = Bin.fromDecimal(other)
+		elif type(other) == str:
+			if len(other) == 8:
+				other = Bin(other)
+			elif len(other) == 2:
+				other = Bin.fromHex(other)
+		temp = Bin()
+		C = 0
+		for i in range(8):
+			temp[i], C = self.fullAdder(self[i], other[i], C)
+		return temp
 
 	def __sub__(self, other):
-		if isinstance(other, int):
-			other = self.decToBin(other)
-		if self.bitLength > other.bitLength:
-			other = other >> (self.bitLength - other.bitLength)
-		elif self.bitLength < other.bitLength:
-			self = self >> (other.bitLength - self.bitLength)
-		other = ~other;
-		other = other + Bin("1")
-		return other + self
+		if type(other) == int:
+			other = Bin.fromDecimal(other)
+		elif type(other) == str:
+			if len(other) == 8:
+				other = Bin(other)
+			elif len(other) == 2:
+				other = Bin.fromHex(other)
+		other = ~other + Bin("00000001")
+		return self.__add__(other)
+
+	def toDecimal(self):
+		return sum([2**i if self[i] == 1 else 0 for i in range(8)])
+
+	def toHex(self):
+		highNibble = Bin.toDecimal((self & Bin("11110000")) >> 4)
+		lowNibble =	Bin.toDecimal(self & Bin("00001111"))
+		hexString = ""
+		for i in [highNibble, lowNibble]:
+			if i == 10:
+				hexString += "A"
+			elif i == 11:
+				hexString += "B"
+			elif i == 12:
+				hexString += "C"
+			elif i == 13:
+				hexString += "D"
+			elif i == 14:
+				hexString += "E"
+			elif i == 15:
+				hexString += "F"
+			else:
+				hexString += str(i)
+		return hexString
+
+	@staticmethod
+	def fullAdder(a, b, c=0):
+		S = (a ^ b) ^ c
+		C = (a & b) | c & (a ^ b)
+		return S, C
+
+	@staticmethod
+	def fromDecimal(a):
+		flip = False
+		if a < 0:
+			flip = True
+			a = 0 - a
+		temp = Bin()
+		for i in range(8):
+			if 2**(7-i) <= a:
+				a -= 2**(7-i)
+				temp.array[i] = 1
+		if flip:
+			return ~temp + Bin("00000001")
+		return temp
+
+	@staticmethod
+	def fromHex(a):
+		temp = Bin()
+		highNibble = Bin.fromDecimal(int(a[0], 16)) << 4
+		lowNibble = Bin.fromDecimal(int(a[1], 16))
+		return highNibble | lowNibble
+
+class Bin16():
+	def __init__(self, a=None, b=None):
+		if not a:
+			a_, b_ = Bin(), Bin()
+			self.array = [a_, b_]
+		elif not b:
+			a_, b_ = Bin(), Bin()
+			for i in range(8):
+				a_[7-i] = int(a[i])
+			for i in range(8):
+				b_[7-i] = int(a[i+8])
+			self.array = [a_, b_]
+		else:
+			if type(a) == Bin and type(a) == Bin:
+				self.array = [a,b]
+			else:
+				self.array = [Bin(a), Bin(b)]
+
+	def __repr__(self):
+		return self.__str__()
+
+	def __str__(self):
+		string = ""
+		for i in range(2):
+			for j in range(7, -1,  -1):
+				string += str(self.array[i][j])
+		return string
+
+	def __getitem__(self, index):
+		if type(index) ==  int:
+			return self.array[(index//8 +1)%2][index % 8]
+
+	def __setitem__(self, index, val):
+		if type(index) == int:
+			self.array[(index//8 +1)%2][index % 8] = val
+		return self
+
+	def __invert__(self):
+		temp = Bin16()
+		for i in range(2):
+			temp.array[i] = ~self.array[i]
+		return temp
+
+	def __and__(self, other):
+		for i in range(2):
+			self.array[i] = self.array[i] & other.array[i]
+		return self
+
+	def __or__(self, other):
+		for i in range(2):
+			self.array[i] = self.array[i] | other.array[i]
+		return self
+
+	def __xor__(self, other):
+		for i in range(2):
+			self.array[i] = self.array[i] ^ other.array[i]
+		return self
+
+	def __lshift__(self, a):
+		binString = []
+		for j in range(16):
+				binString.append(self[15-j])
+		for i in range(a):
+			binString.pop(0)
+			binString.append(0)
+		return Bin16(binString)
+
+	def __rshift__(self, a):
+		binString = []
+		for j in range(16):
+				binString.append(self[15-j])
+		for i in range(a):
+			binString.pop()
+			binString.insert(0, 0)
+		return Bin16(binString)
+
+	def __add__(self, other):
+		if type(other) == int:
+			other = Bin16.fromDecimal(other)
+		elif type(other) == str:
+			if len(other) == 16:
+				other = Bin16(other)
+			elif len(other) == 4:
+				other = Bin16.fromHex(other)
+		temp = Bin16()
+		c = 0
+		for i in range(16):
+			temp[i], c = Bin.fullAdder(self[i], other[i], c)
+		return temp
+
+	def __sub__(self, other):
+		if type(other) == int:
+			other = Bin16.fromDecimal(other)
+		elif type(other) == str:
+			if len(other) == 16:
+				other = Bin16(other)
+			elif len(other) == 4:
+				other = Bin16.fromHex(other)
+		other = ~other + Bin16("0000000000000001")
+		return self.__add__(other)
+
+	def toDecimal(self):
+		decArray = []
+		for i in self.array:
+			decArray.append(i.toDecimal())
+		decArray[0] = decArray[0] * 256
+		return sum(decArray)
+
+	def toHex(self):
+		hexString = ""
+		for i in self.array:
+			hexString += i.toHex()
+		return hexString
+
+	@staticmethod
+	def fromDecimal(a):
+		return Bin16(Bin.fromDecimal(a//256), Bin.fromDecimal(a % 256))
+
+	@staticmethod
+	def fromHex(a):
+		return Bin16(Bin.fromHex(a[:2]), Bin.fromHex(a[2:]))
+
+
+if __name__ == "__main__":
+	def test(a, b):
+		A = Bin.fromDecimal(a)
+		B = Bin.fromDecimal(b)
+		C = A + B
+		if not ((A.toDecimal() == a) | (-256+A.toDecimal() == a)):
+			print(1, a, A, A.toDecimal(), -256+A.toDecimal(), (A.toDecimal() == a | -256+A.toDecimal() == a))
+			return False
+		if not ((B.toDecimal() == b) | (-256+B.toDecimal() == b)):
+			print(2, b, B, B.toDecimal(), -256+B.toDecimal())
+			return False
+		if not ((C.toDecimal() == a + b) | (-256+C.toDecimal() == a + b)):
+			print(3, C, C.toDecimal(), C.toDecimal() == a + b, -256+C.toDecimal() == a + b)
+			return False
+		C = A - B
+		if not ((C.toDecimal() == a - b) | (-256+C.toDecimal() == a - b)):
+			print(4, C, C.toDecimal(), 0-(256-(C.toDecimal())), (C.toDecimal() == a - b) | (0-(256-(C.toDecimal())) == a - b))
+			return False
+		return True
+
+	import random
+	passed = 0
+	failed = 0
+	for i in range(25):
+		a_ = [random.randint(0, 128), random.randint(0, 128), random.randint(-127, 128), random.randint(-127, 128)]
+		b_ = [random.randint(0, 128), random.randint(-127, 128), random.randint(0, 128), random.randint(-127, 128)]
+		for i in range(4):
+			a, b = a_[i], b_[i]
+			if test(a,b):
+				passed += 1
+			else:
+				failed += 1
+	print("Passed: {0}\tFailed: {1}".format(passed, failed))
