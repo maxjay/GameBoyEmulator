@@ -1,36 +1,36 @@
-"# GameBoyEmulator written in Python" 
+"# GameBoyEmulator written in Python"
 
 This is a program to emulate the DMG Gameboy...
 
 CPU Design:
 The cpu utilises a fetch-decode-execution loop style.
-	-	An instruction is fetched from the memory at the address of the program counter
-	-	The program counter is then incremented
-	-	Instruction is decoded
-	-	Instruction is executed
+...An instruction is fetched from the memory at the address of the program counter..
+...The program counter is then incremented
+...Instruction is decoded..
+...Instruction is executed..
 
 
 CPU Registers:
-REGISTER		PURPOSE			16Bit
-A				ACCUMULATOR		AF
-F				STATUS FLAGS	AF
-B				GP REGISTER		BC
-C				COUNTER			BC
-D				GP REGISTER		DE
-E				GP REGISTER		DE
-H				POINTER			HL
-L				POINTER			HL
-SP				STACK POINTER	-
-PC				PROGRAM COUNTER	-
+REGISTER | PURPOSE | 16Bit
+--- | --- | ---
+A | ACCUMULATOR | AF
+F | STATUS FLAGS | AF
+B | GP REGISTER | BC
+C | COUNTER | BC
+D | GP REGISTER | DE
+E | GP REGISTER | DE
+H | POINTER | HL
+L | POINTER | HL
+SP | STACK POINTER | -
+PC | PROGRAM COUNTER | -
 
 Flags:
-FLAG			BIT POS			DESC
-Z				7				ZERO FLAG (IF RESULT == 0: 1)
-S				6				SUBTRACTION FLAG (IF OP == SUB: 1)				
-H				5				HALF CARRY FLAG (IF CARRY FROM BIT 3 TO 4: 1)
-C				4				CARRY FLAG (IF CARRY FROM BIT 7: 1) [OVERFLOW]
-
-
+FLAG | BIT POS | DESC
+--- | --- | ---
+Z | 7 | ZERO FLAG (IF RESULT == 0: 1)
+S | 6 | SUBTRACTION FLAG (IF OP == SUB: 1)
+H | 5 | HALF CARRY FLAG (IF CARRY FROM BIT 3 TO 4: 1)
+C | 4 | CARRY FLAG (IF CARRY FROM BIT 7: 1) [OVERFLOW]
 
 Memory Config:
 	-	0x000 - 0x7FFF		: Program Data
@@ -76,11 +76,11 @@ SOUND			NR X X				0xFF10 - 0xFF26
 
 Subjectively, Python doesn't have a nice builtin binary library. So I'll write on myself
 Binary will be sorted as an 8 bit array of 1 and 0 in Big Endian:
-
+```
 INDEX |	7 | 6 | 5 | 4 | 3 | 2 | 1 | 0
 =====================================
 VALUE | 1 | 1 | 0 | 0 | 1 | 0 | 1 | 0
-
+```
 However will be displayed and interrupted (outside of class methods) as strings:
 "111001010"
 
