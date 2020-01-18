@@ -27,6 +27,9 @@ class Bin():
 	def __str__(self):
 		return "".join([str(i) for i in self.array])
 
+	def __eq__(self, other):
+		return self.array == other.array
+
 	def __xor__(self, other):
 		return Bin([1 if self.array[i] != other.array[i] else 0 for i in range(8)])
 
@@ -107,6 +110,29 @@ class Bin():
 		return S, C
 
 	@staticmethod
+	def overflowing_add(a,b):
+		temp = Bin()
+		C = 0
+		for i in range(8):
+			temp[i], C = Bin.fullAdder(a[i], b[i], C)
+		return temp, C
+
+	@staticmethod
+	def underflowing_sub(a,b):
+		b = ~b + Bin("00000001")
+		temp, C = Bin.overflowing_add(a,b)
+		return temp, 1 if C == 0 else 0
+
+	@staticmethod
+	def halfcarry(a,b):
+		print((a & Bin.fromHex("0F")) + (b & Bin.fromHex("0F")) & Bin.fromHex("10") == Bin.fromHex("10"))
+		return 1 if ((a & Bin.fromHex("0F")) + (b & Bin.fromHex("0F"))) & Bin.fromHex("10") == Bin.fromHex("10") else 0
+
+	@staticmethod
+	def halfborrow(a,b):
+		return 0 if Bin.halfcarry(a,b) == 1 else 1
+
+	@staticmethod
 	def fromDecimal(a):
 		flip = False
 		if a < 0:
@@ -155,6 +181,9 @@ class Bin16():
 			for j in range(7, -1,  -1):
 				string += str(self.array[i][j])
 		return string
+
+	def __eq__(self, other):
+		return self.array == other.array
 
 	def __getitem__(self, index):
 		if type(index) ==  int:
@@ -241,6 +270,9 @@ class Bin16():
 		for i in self.array:
 			hexString += i.toHex()
 		return hexString
+
+	def to8Bin(self):
+		return self.array
 
 	@staticmethod
 	def fromDecimal(a):
