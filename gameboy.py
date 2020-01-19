@@ -9,3 +9,7 @@ class GameBoy():
 	def boot(self):
 		self.memory.load("boot.bin")
 		self.cpu.boot()
+
+if __name__ == "__main__":
+	a = GameBoy()
+	a.boot()

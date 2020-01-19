@@ -18,6 +18,12 @@ class Register():
 						"H": Bin.fromHex("00"),
 						"L": Bin.fromHex("00")}
 
+	def __setitem__(self, key, value):
+		return self.store(key, value)
+
+	def __getitem__(self, key):
+		return self.load(key)
+
 	def store(self, register, bin):
 		if len(register) == 1:
 			self.register[register] = bin
@@ -48,9 +54,29 @@ class CPU():
 		self.programCounter += 1
 		return instru
 
+	def decode(self, ins):
+		print(ins.toHex())
+		if ins.toHex() == "31":
+			ins2 = self.fetch()
+			ins3 = self.fetch()
+			self.stackPointer = Bin16(ins3, ins2)
+		elif ins.toHex() == "AF":
+			self.register["A"] = self.register["A"] ^ self.register["A"]
+			#I FORGOT THE FLAGS
+		elif ins.toHex() == "21":
+			ins2 = self.fetch()
+			ins3 = self.fetch()
+			self.register["HL"] = Bin16(ins3, ins2)
+		elif ins.toHex() == "32":
+			self.register["HL"] = self.register["
+		else:
+			exit()
+
 	def execute(self):
 		pass
 
 	def boot(self):
-		while self.programCounter != Bin16.fromDecimal(100):
-			print(self.fetch().toHex())
+		while self.programCounter != Bin16.fromHex("0100"):
+			ins = self.fetch()
+			self.decode(ins)
+		print(self.programCounter, self.programCounter.toHex())
