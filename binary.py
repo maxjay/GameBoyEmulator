@@ -241,6 +241,8 @@ class Bin16():
 				other = Bin16(other)
 			elif len(other) == 4:
 				other = Bin16.fromHex(other)
+		elif type(other) == Bin:
+			other = Bin16(Bin(), other)
 		temp = Bin16()
 		c = 0
 		for i in range(16):

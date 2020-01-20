@@ -80,9 +80,35 @@ class CPU():
 			if ins2.toHex() == "7C": #test bit 7 in register C
 				self.register["F"][7] = 1 if self.register["C"][7] == 0 else 0
 				self.register["F"][5] = 1
+			else:
+				print("CB", ins2.toHex())
 		elif ins.toHex() == "20":
 			ins2 = self.fetch()
-			#check if you can do Bin + Bin16, if not add case
+			if not self.register["F"][7]:
+				self.programCounter += ins2
+		elif ins.toHex() == "0E":
+			ins2 = self.fetch()
+			self.register["C"] = ins2
+		elif ins.toHex() == "3E":
+			ins2 = self.fetch()
+			self.register["A"] = ins2
+		elif ins.toHex() == "E2":
+			self.memoryBus[Bin16.fromHex("FF00") + self.register["C"]] = self.register["A"]
+		elif ins.toHex() == "0C":
+			self.register["C"] += 1
+		elif ins.toHex() == "77":
+			self.register["HL"] = Bin16(Bin(), self.register["A"])
+		elif ins.toHex() == "E0":
+			ins2 = self.fetch()
+			self.memoryBus[Bin16.fromHex("FF00") + ins2] = self.register["A"]
+		elif ins.toHex() == "11":
+			ins2 = self.fetch()
+			ins3 = self.fetch()
+			self.register["DE"] = Bin16(ins3, ins2)
+		elif ins.toHex() == "1A":
+			self.register["A"] = self.memoryBus[self.register["DE"]]
+		elif ins.toHex() == "CD":
+			pass
 		else:
 			exit()
 
