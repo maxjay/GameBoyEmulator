@@ -28,8 +28,12 @@ class Register():
 		if len(register) == 1:
 			self.register[register] = bin
 		else:
-			self.register[register[0]] = bin.to8Bin()[0]
-			self.register[register[1]] = bin.to8Bin()[1]
+			if type(bin) == Bin16:
+				self.register[register[0]] = bin.to8Bin()[0]
+				self.register[register[1]] = bin.to8Bin()[1]
+			else:
+				self.register[register[0]] = Bin()
+				self.register[register[1]] = bin
 
 	def load(self, register):
 		if len(register) == 1:
@@ -62,13 +66,23 @@ class CPU():
 			self.stackPointer = Bin16(ins3, ins2)
 		elif ins.toHex() == "AF":
 			self.register["A"] = self.register["A"] ^ self.register["A"]
+			self.register["F"][7] = 1 if self.register["A"] == Bin() else 0
 			#I FORGOT THE FLAGS
 		elif ins.toHex() == "21":
 			ins2 = self.fetch()
 			ins3 = self.fetch()
 			self.register["HL"] = Bin16(ins3, ins2)
 		elif ins.toHex() == "32":
-			self.register["HL"] = self.register["
+			self.register["HL"] = self.register["A"]
+			self.register["HL"] += -1
+		elif ins.toHex() == "CB":
+			ins2 = self.fetch()
+			if ins2.toHex() == "7C": #test bit 7 in register C
+				self.register["F"][7] = 1 if self.register["C"][7] == 0 else 0
+				self.register["F"][5] = 1
+		elif ins.toHex() == "20":
+			ins2 = self.fetch()
+			#check if you can do Bin + Bin16, if not add case
 		else:
 			exit()
 
