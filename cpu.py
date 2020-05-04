@@ -3,19 +3,21 @@ from binary import Bin16
 from memory import *
 
 class CPU():
-	programCounter = Bin16.fromHex("0000")
-	stackPointer = Bin16.fromHex("0000")
-	A = Bin.fromHex("00")
+	programCounter = Bin16.fromHex("0100")
+	stackPointer = Bin16.fromHex("FFFE")
+	A = Bin.fromHex("11")
 	B = Bin.fromHex("00")
 	C = Bin.fromHex("00")
-	D = Bin.fromHex("00")
-	E = Bin.fromHex("00")
-	F = Bin.fromHex("00")
+	D = Bin.fromHex("FF")
+	E = Bin.fromHex("56")
+	F = Bin.fromHex("80")
 	H = Bin.fromHex("00")
-	L = Bin.fromHex("00")
+	L = Bin.fromHex("0D")
 
 	def __setattr__(self, name, value):
-		if isinstance(value, Bin):
+		if isinstance(value, Memory):
+			super().__setattr__(name, value)
+		elif isinstance(value, Bin):
 			super().__getattribute__(name).array = value.array
 		elif isinstance(value, Bin16):
 			a,b = value.array[0], value.array[1]
@@ -31,6 +33,10 @@ class CPU():
 			elif name == "HL":
 				self.__setattr__("H", a)
 				self.__setattr__("L", b)
+			elif name == "stackPointer":
+				super().__getattribute__(name).array = value.array
+			elif name == "programCounter":
+				super().__getattribute__(name).array = value.array
 
 	def __getattribute__(self, name):
 		if name == "AF":
@@ -67,10 +73,21 @@ class CPU():
 		return Bin16(most, least)
 
 	def execute(self, opcode):
-		print(opcode)
 		#8 bit opcodes
 		#8 BIT LOAD INSTRUCTIONS	
-		if opcode == "7F":		#LD A,A
+		if opcode == "06":		#LD B,N
+			self.B = self.fetch()
+		elif opcode == "0E":	#LD C,N
+			self.C = self.fetch()
+		elif opcode == "16":	#LD D,N
+			self.D = self.fetch()
+		elif opcode == "1E":	#LD E,N
+			self.E = self.fetch()
+		elif opcode == "26":	#LD H,N
+			self.H = self.fetch()
+		elif opcode == "2E":	#LD L,N
+			self.L = self.fetch()
+		elif opcode == "7F":	#LD A,A
 			self.A = self.A
 		elif opcode == "78":	#LD A,B
 			self.A = self.B
@@ -244,12 +261,125 @@ class CPU():
 		elif opcode == "F9":	#LD SP,HL
 			self.stackPointer = self.HL
 		elif opcode == "F8":	#LDHL SP,n
-			self.HL = self.stackPointer+self.fetch()
-			#FLAGS
-			##NOT FINISHED
+			a = self.stackPointer
+			b = self.fetch()
+			self.HL, self.F[4] = Bin.overflowing_add(a,b)
+			self.HL = self.read(self.HL)
+			self.F[7]= 0
+			self.F[6]= 0
+			self.F[5]= Bin.halfcarry(a, b)
+		elif opcode == "08":	#LD (nn),SP
+			self.write(self.fetch16(), self.stackPointer)
+		elif opcode == "F5":	#PUSH AF
+			self.stackPointer -= 1
+			self.write(self.stackPointer, self.A)
+			self.stackPointer -= 1
+			self.write(self.stackPointer, self.F)
+		elif opcode == "C5":	#PUSH BC
+			self.stackPointer -= 1
+			self.write(self.stackPointer, self.B)
+			self.stackPointer -= 1
+			self.write(self.stackPointer, self.C)
+		elif opcode == "D5":	#PUSH DE
+			self.stackPointer -= 1
+			self.write(self.stackPointer, self.D)
+			self.stackPointer -= 1
+			self.write(self.stackPointer, self.E)
+		elif opcode == "E5":	#PUSH HL
+			self.stackPointer -= 1
+			self.write(self.stackPointer, self.H)
+			self.stackPointer -= 1
+			self.write(self.stackPointer, self.L)
+		elif opcode == "F1":	#POP AF
+			self.F = self.read(self.stackPointer)
+			self.stackPointer += 1
+			self.A = self.read(self.stackPointer)
+			self.stackPointer += 1
+		elif opcode == "C1":	#POP BC
+			self.C = self.read(self.stackPointer)
+			self.stackPointer += 1
+			self.B = self.read(self.stackPointer)
+			self.stackPointer += 1
+		elif opcode == "D1":	#POP DE
+			self.E = self.read(self.stackPointer)
+			self.stackPointer += 1
+			self.D = self.read(self.stackPointer)
+			self.stackPointer += 1
+		elif opcode == "E1":	#POP HL
+			self.L = self.read(self.stackPointer)
+			self.stackPointer += 1
+			self.H = self.read(self.stackPointer)
+			self.stackPointer += 1
+		#8 BIT ALU
+		elif opcode == "87":	#ADD A,A
+			self.F[7] = 1 if self.A + self.A == Bin(0) else 0
+			self.F[6] = 0
+			self.F[5] = Bin.halfcarry(self.A, self.A)
+			self.A, self.F[4] = Bin.overflowing_add(self.A, self.A)
+		elif opcode == "80":	#ADD A,B
+			self.F[7] = 1 if self.A + self.B == Bin(0) else 0
+			self.F[6] = 0
+			self.F[5] = Bin.halfcarry(self.A, self.B)
+			self.A, self.F[4] = Bin.overflowing_add(self.A, self.B)
+		elif opcode == "81":	#ADD A,C
+			self.F[7] = 1 if self.A + self.C == Bin(0) else 0
+			self.F[6] = 0
+			self.F[5] = Bin.halfcarry(self.A, self.C)
+			self.A, self.F[4] = Bin.overflowing_add(self.A, self.C)
+		elif opcode == "82":	#ADD A,D
+			self.F[7] = 1 if self.A + self.D == Bin(0) else 0
+			self.F[6] = 0
+			self.F[5] = Bin.halfcarry(self.A, self.D)
+			self.A, self.F[4] = Bin.overflowing_add(self.A, self.D)
+		elif opcode == "83":	#ADD A,E
+			self.F[7] = 1 if self.A + self.E == Bin(0) else 0
+			self.F[6] = 0
+			self.F[5] = Bin.halfcarry(self.A, self.E)
+			self.A, self.F[4] = Bin.overflowing_add(self.A, self.E)
+		elif opcode == "84":	#ADD A,H
+			self.F[7] = 1 if self.A + self.H == Bin(0) else 0
+			self.F[6] = 0
+			self.F[5] = Bin.halfcarry(self.A, self.H)
+			self.A, self.F[4] = Bin.overflowing_add(self.A, self.H)
+		elif opcode == "85":	#ADD A,L
+			self.F[7] = 1 if self.A + self.L == Bin(0) else 0
+			self.F[6] = 0
+			self.F[5] = Bin.halfcarry(self.A, self.L)
+			self.A, self.F[4] = Bin.overflowing_add(self.A, self.L)
+		elif opcode == "86":	#ADD A,(HL)
+			self.F[7] = 1 if self.A + self.read(self.HL) == Bin(0) else 0
+			self.F[6] = 0
+			self.F[5] = Bin.halfcarry(self.A, self.read(self.HL))
+			self.A, self.F[4] = Bin.overflowing_add(self.A, self.read(self.HL))
+		elif opcode == "87":	#ADD A,n
+			a = self.fetch()
+			self.F[7] = 1 if self.A + a == Bin(0) else 0
+			self.F[6] = 0
+			self.F[5] = Bin.halfcarry(self.A, a)
+			self.A, self.F[4] = Bin.overflowing_add(self.A, a)
+		elif opcode == "C3":	#JP nn
+			a = self.fetch()
+			b = self.fetch()
+			self.programCounter = Bin16(b, a)
+		else:
+			pass
 
-	def boot(self):
-		while self.programCounter != Bin16.fromHex("0100"):
-			ins = self.fetch()
-			self.decode(ins)
-		print(self.programCounter, self.programCounter.toHex())
+	def debug(self):
+		while True:
+			print("AF: {0}\nBC: {1}\nDE: {2}\nHL: {3}\nStack Pointer: {4}\nProgram Counter: {5}".format(self.AF.toHex(), self.BC.toHex(), self.DE.toHex(), self.HL.toHex(), self.stackPointer.toHex(), self.programCounter.toHex()))
+			print("Program Counter at: {0}\tInstruction: {1}".format(self.programCounter.toHex(), self.memoryBus[self.programCounter].toHex()))
+			self.execute(self.fetch())
+			input()
+
+	def run(self):
+		while True:
+			print("Program Counter at: {0}\tInstruction: {1}".format(self.programCounter.toHex(), self.memoryBus[self.programCounter].toHex()))
+			self.execute(self.fetch())
+			#if (self.memoryBus[Bin16.fromHex("FF02")] == Bin.fromHex("81")):
+			#	print("Y")
+
+	#def boot(self):
+	#	while self.programCounter != Bin16.fromHex("0100"):
+	#		ins = self.fetch()
+	#		self.decode(ins)
+	#	print(self.programCounter, self.programCounter.toHex())

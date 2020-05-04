@@ -28,6 +28,8 @@ class Bin():
 		return "".join([str(i) for i in self.array])
 
 	def __eq__(self, other):
+		if isinstance(other, str):
+			return self.array == Bin.fromHex(other).array
 		return self.array == other.array
 
 	def __xor__(self, other):
@@ -125,7 +127,7 @@ class Bin():
 
 	@staticmethod
 	def halfcarry(a,b):
-		print((a & Bin.fromHex("0F")) + (b & Bin.fromHex("0F")) & Bin.fromHex("10") == Bin.fromHex("10"))
+		#print((a & Bin.fromHex("0F")) + (b & Bin.fromHex("0F")) & Bin.fromHex("10") == Bin.fromHex("10"))
 		return 1 if ((a & Bin.fromHex("0F")) + (b & Bin.fromHex("0F"))) & Bin.fromHex("10") == Bin.fromHex("10") else 0
 
 	@staticmethod
