@@ -2,6 +2,47 @@ from binary import Bin
 from binary import Bin16
 from memory import *
 
+# ALU will handle all arthimetic 
+# Returns answer, sets flags automatically
+class ALU():
+	def __init__(self, F):
+		self.F = F
+		#	7	Zero
+		#	6	Subtraction
+		#	5	Half carry/borrow
+		#	4	Overflow/underflow
+
+	def __setattr__(self, name, value):
+		if name in dir(self):
+			if isinstance(value, Bin):
+				super().__getattribute__(name).array = value.array
+			else:
+				super().__setattr__(name, value)
+		else:
+			super().__setattr__(name, value)
+
+	def __getattribute__(self, name):
+		return super().__getattribute__(name)
+
+	def overflowing_add(self, a, b, c=0):
+		self.F[6] = 0 
+		temp = Bin16() if isinstance(a, Bin16) else Bin()
+		checks = [11,15] if isinstance(a, Bin16) else [3,7]
+		for i in range(checks[1]+1):
+			temp[i], c = Bin.fullAdder(a[i], b[i], c)
+			if i == checks[0]:
+				self.F[5] = c
+			if i == checks[1]:
+				self.F[4] = c
+		self.F[7] = 1 if temp.toDecimal() == 0 else 0
+		return  temp
+
+	def ADD(self, x, y):	#ADD x,y
+		return self.overflowing_add(x, y)
+
+	def ADC(self, x, y,):	#ADC x,y
+		return self.overflowing_add(x,y,self.F[4])
+
 class CPU():
 	programCounter = Bin16.fromHex("0100")
 	stackPointer = Bin16.fromHex("FFFE")
@@ -16,6 +57,8 @@ class CPU():
 
 	def __setattr__(self, name, value):
 		if isinstance(value, Memory):
+			super().__setattr__(name, value)
+		elif isinstance(value, ALU):
 			super().__setattr__(name, value)
 		elif isinstance(value, Bin):
 			super().__getattribute__(name).array = value.array
@@ -50,6 +93,7 @@ class CPU():
 		return super().__getattribute__(name)
 
 	def __init__(self, Memory=None):
+		self.ALU = ALU(self.F)
 		self.memoryBus = Memory
 
 	def read(self, address):
@@ -312,55 +356,41 @@ class CPU():
 			self.stackPointer += 1
 		#8 BIT ALU
 		elif opcode == "87":	#ADD A,A
-			self.F[7] = 1 if self.A + self.A == Bin(0) else 0
-			self.F[6] = 0
-			self.F[5] = Bin.halfcarry(self.A, self.A)
-			self.A, self.F[4] = Bin.overflowing_add(self.A, self.A)
+			self.A = self.ALU.ADD(self.A, self.A)
 		elif opcode == "80":	#ADD A,B
-			self.F[7] = 1 if self.A + self.B == Bin(0) else 0
-			self.F[6] = 0
-			self.F[5] = Bin.halfcarry(self.A, self.B)
-			self.A, self.F[4] = Bin.overflowing_add(self.A, self.B)
+			self.A = self.ALU.ADD(self.A, self.B)
 		elif opcode == "81":	#ADD A,C
-			self.F[7] = 1 if self.A + self.C == Bin(0) else 0
-			self.F[6] = 0
-			self.F[5] = Bin.halfcarry(self.A, self.C)
-			self.A, self.F[4] = Bin.overflowing_add(self.A, self.C)
+			self.A = self.ALU.ADD(self.A, self.C)
 		elif opcode == "82":	#ADD A,D
-			self.F[7] = 1 if self.A + self.D == Bin(0) else 0
-			self.F[6] = 0
-			self.F[5] = Bin.halfcarry(self.A, self.D)
-			self.A, self.F[4] = Bin.overflowing_add(self.A, self.D)
+			self.A = self.ALU.ADD(self.A, self.D)
 		elif opcode == "83":	#ADD A,E
-			self.F[7] = 1 if self.A + self.E == Bin(0) else 0
-			self.F[6] = 0
-			self.F[5] = Bin.halfcarry(self.A, self.E)
-			self.A, self.F[4] = Bin.overflowing_add(self.A, self.E)
+			self.A = self.ALU.ADD(self.A, self.E)
 		elif opcode == "84":	#ADD A,H
-			self.F[7] = 1 if self.A + self.H == Bin(0) else 0
-			self.F[6] = 0
-			self.F[5] = Bin.halfcarry(self.A, self.H)
-			self.A, self.F[4] = Bin.overflowing_add(self.A, self.H)
+			self.A = self.ALU.ADD(self.A, self.H)
 		elif opcode == "85":	#ADD A,L
-			self.F[7] = 1 if self.A + self.L == Bin(0) else 0
-			self.F[6] = 0
-			self.F[5] = Bin.halfcarry(self.A, self.L)
-			self.A, self.F[4] = Bin.overflowing_add(self.A, self.L)
+			self.A = self.ALU.ADD(self.A, self.L)
 		elif opcode == "86":	#ADD A,(HL)
-			self.F[7] = 1 if self.A + self.read(self.HL) == Bin(0) else 0
-			self.F[6] = 0
-			self.F[5] = Bin.halfcarry(self.A, self.read(self.HL))
-			self.A, self.F[4] = Bin.overflowing_add(self.A, self.read(self.HL))
-		elif opcode == "87":	#ADD A,n
-			a = self.fetch()
-			self.F[7] = 1 if self.A + a == Bin(0) else 0
-			self.F[6] = 0
-			self.F[5] = Bin.halfcarry(self.A, a)
-			self.A, self.F[4] = Bin.overflowing_add(self.A, a)
-		elif opcode == "C3":	#JP nn
-			a = self.fetch()
-			b = self.fetch()
-			self.programCounter = Bin16(b, a)
+			self.A = self.ALU.ADD(self.A, self.read(self.HL))
+		elif opcode == "C6":	#ADD A,n
+			self.A = self.ALU.ADD(self.A, self.fetch())
+		elif opcode == "8F":	#ADC A,A
+			self.A = self.ALU.ADC(self.A, self.A)
+		elif opcode == "88":	#ADC A,B
+			self.A = self.ALU.ADC(self.A, self.B)
+		elif opcode == "89":	#ADC A,C
+			self.A = self.ALU.ADC(self.A, self.C)
+		elif opcode == "8A":	#ADC A,D
+			self.A = self.ALU.ADC(self.A, self.D)
+		elif opcode == "8B":	#ADC A,E
+			self.A = self.ALU.ADC(self.A, self.E)
+		elif opcode == "8C":	#ADC A,H
+			self.A = self.ALU.ADC(self.A, self.H)
+		elif opcode == "8D":	#ADC A,L
+			self.A = self.ALU.ADC(self.A, self.L)
+		elif opcode == "8E":	#ADC A,(HL)
+			self.A = self.ALU.ADC(self.A, self.read(self.HL))
+		elif opcode == "CE":	#ADC A,n
+			self.A = self.ALU.ADC(self.A, self.fetch())
 		else:
 			pass
 
