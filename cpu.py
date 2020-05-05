@@ -37,11 +37,27 @@ class ALU():
 		self.F[7] = 1 if temp.toDecimal() == 0 else 0
 		return  temp
 
+	def underflowing_sub(self, a, b, B=0):
+		self.F[6] = 1
+		temp = Bin16() if isinstance(a, Bin16) else Bin()
+		checks = [11,15] if isinstance(a, Bin16) else [3,7]
+		for i in range(checks[1]+1):
+			temp[i], B = Bin.fullSubber(a[i], b[i], B)
+			if i == checks[0]:
+				self.F[5] = B
+			if i == checks[1]:
+				self.F[4] = B
+		self.F[7] = 1 if temp.toDecimal() == 0 else 0
+		return  temp
+
 	def ADD(self, x, y):	#ADD x,y
 		return self.overflowing_add(x, y)
 
-	def ADC(self, x, y,):	#ADC x,y
+	def ADC(self, x, y):	#ADC x,y
 		return self.overflowing_add(x,y,self.F[4])
+
+	def SUB(self, x, y):
+		return self.underflowing_sub(x, y)
 
 class CPU():
 	programCounter = Bin16.fromHex("0100")

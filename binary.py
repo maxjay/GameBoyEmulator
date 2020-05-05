@@ -112,6 +112,14 @@ class Bin():
 		return S, C
 
 	@staticmethod
+	def fullSubber(x, y, b=0):
+		x_ = 1 if x == 0 else 0
+		D = (x ^ y) ^ b
+		z = 1 if (x^y) == 0 else 0
+		B = (x_ & y) | (b & z)
+		return D, B
+
+	@staticmethod
 	def overflowing_add(a,b):
 		temp = Bin()
 		C = 0
@@ -121,9 +129,16 @@ class Bin():
 
 	@staticmethod
 	def underflowing_sub(a,b):
+		temp = Bin()
+		B = 0
+		for i in range(8):
+			temp[i], B = Bin.fullSubber(a[i], b[i], B)
+		return temp, B
+		'''
 		b = ~b + Bin("00000001")
 		temp, C = Bin.overflowing_add(a,b)
 		return temp, 1 if C == 0 else 0
+		'''
 
 	@staticmethod
 	def halfcarry(a,b):
