@@ -37,6 +37,17 @@ class ALU():
 		self.F[7] = 1 if temp.toDecimal() == 0 else 0
 		return  temp
 
+	def add(self, a, b, c=0):
+		self.F[6] = 0 
+		temp = Bin16() if isinstance(a, Bin16) else Bin()
+		checks = [11,15] if isinstance(a, Bin16) else [3,7]
+		for i in range(checks[1]+1):
+			temp[i], c = Bin.fullAdder(a[i], b[i], c)
+			if i == checks[0]:
+				self.F[5] = c
+		self.F[7] = 1 if temp.toDecimal() == 0 else 0
+		return  temp
+
 	def underflowing_sub(self, a, b, B=0):
 		self.F[6] = 1
 		temp = Bin16() if isinstance(a, Bin16) else Bin()
@@ -50,14 +61,79 @@ class ALU():
 		self.F[7] = 1 if temp.toDecimal() == 0 else 0
 		return  temp
 
+	def sub(self, a, b, B=0):
+		self.F[6] = 1
+		temp = Bin16() if isinstance(a, Bin16) else Bin()
+		checks = [11,15] if isinstance(a, Bin16) else [3,7]
+		for i in range(checks[1]+1):
+			temp[i], B = Bin.fullSubber(a[i], b[i], B)
+			if i == checks[0]:
+				self.F[5] = B
+		self.F[7] = 1 if temp.toDecimal() == 0 else 0
+		return  temp
+
 	def ADD(self, x, y):	#ADD x,y
 		return self.overflowing_add(x, y)
 
 	def ADC(self, x, y):	#ADC x,y
-		return self.overflowing_add(x,y,self.F[4])
+		return self.overflowing_add(x, y, self.F[4])
 
-	def SUB(self, x, y):
+	def SUB(self, x, y):	#SUB x,y
 		return self.underflowing_sub(x, y)
+
+	def SBC(self, x, y):	#SBC x,y
+		return self.underflowing_sub(x, y, self.F[4])
+
+	def AND(self, x, y):
+		self.F[7] = 1 if  x & y == Bin("00000000") else 0
+		self.F[6] = 0
+		self.F[5] = 1
+		self.F[4] = 0
+		return x & y
+
+	def OR(self, x, y):
+		self.F[7] = 1 if x | y == Bin("00000000") else 0
+		self.F[6] = 0
+		self.F[5] = 0
+		self.F[4] = 0
+		return x | y
+
+	def XOR(self, x, y):
+		self.F[7] = 1 if x | y == Bin("00000000") else 0
+		self.F[6] = 0
+		self.F[5] = 0
+		self.F[4] = 0
+		return x | y
+
+	def CP(self, x, y):
+		self.SUB(x, y)
+
+	def INC(self, x):
+		return self.add(x, Bin.fromDecimal(1))
+
+	def DEC(self, x):
+		return self.sub(x, Bin.fromDecimal(1))
+
+	'''
+	def INC(self, x):
+		self.F[6] = 0 
+		if isinstance(x, Bin16):
+			checks = [11]
+			l = 16
+			y = Bin16.fromDecimal(1)
+		else:
+			checks = [3]
+			l = 8
+			y = Bin.fromDecimal(1)
+		for i in range(l):
+			temp[i], c = Bin.fullAdder(a[i], b[i], c)
+			if i == checks[0]:
+				self.F[5] = c
+			if i == checks[1]:
+				self.F[4] = c
+		self.F[7] = 1 if temp.toDecimal() == 0 else 0
+		return  temp
+	'''
 
 class CPU():
 	programCounter = Bin16.fromHex("0100")
@@ -407,7 +483,144 @@ class CPU():
 			self.A = self.ALU.ADC(self.A, self.read(self.HL))
 		elif opcode == "CE":	#ADC A,n
 			self.A = self.ALU.ADC(self.A, self.fetch())
-		else:
+		elif opcode == "97":	#SUB A,A
+			self.A = self.ALU.SUB(self.A, self.A)
+		elif opcode == "90":	#SUB A,B
+			self.A = self.ALU.SUB(self.A, self.B)
+		elif opcode == "91":	#SUB A,C
+			self.A = self.ALU.SUB(self.A, self.C)
+		elif opcode == "92":	#SUB A,D
+			self.A = self.ALU.SUB(self.A, self.D)
+		elif opcode == "93":	#SUB A,E
+			self.A = self.ALU.SUB(self.A, self.E)
+		elif opcode == "94":	#SUB A,H
+			self.A = self.ALU.SUB(self.A, self.H)
+		elif opcode == "95":	#SUB A,l
+			self.A = self.ALU.SUB(self.A, self.L)
+		elif opcode == "96":	#SUB A,(HL)
+			self.A = self.ALU.SUB(self.A, self.read(self.HL))
+		elif opcode == "D6":	#SUB A,n
+			self.A = self.ALU.SUB(self.A, self.fetch())
+		elif opcode == "9F":	#SBC A,A
+			self.A = self.ALU.SBC(self.A, self.A)
+		elif opcode == "98":	#SBC A,B
+			self.A = self.ALU.SBC(self.A, self.B)
+		elif opcode == "99":	#SBC A,C
+			self.A = self.ALU.SBC(self.A, self.C)
+		elif opcode == "9A":	#SBC A,D
+			self.A = self.ALU.SBC(self.A, self.D)
+		elif opcode == "9B":	#SBC A,E
+			self.A = self.ALU.SBC(self.A, self.E)
+		elif opcode == "9C":	#SBC A,H
+			self.A = self.ALU.SBC(self.A, self.H)
+		elif opcode == "9D":	#SBC A,L
+			self.A = self.ALU.SBC(self.A, self.L)
+		elif opcode == "9E":	#SBC A,(HL)
+			self.A = self.ALU.SBC(self.A, self.read(self.HL))
+		elif opcode == "A7":	#AND A,A	
+			self.A = self.ALU.AND(self.A, self.A)
+		elif opcode == "A0":	#AND A,B
+			self.A = self.ALU.AND(self.A, self.B)
+		elif opcode == "A1":	#AND A,C
+			self.A = self.ALU.AND(self.A, self.C)
+		elif opcode == "A2":	#AND A,D
+			self.A = self.ALU.AND(self.A, self.D)
+		elif opcode == "A3":	#AND A,E
+			self.A = self.ALU.AND(self.A, self.E)
+		elif opcode == "A4":	#AND A,H
+			self.A = self.ALU.AND(self.A, self.H)
+		elif opcode == "A5":	#AND A,L
+			self.A = self.ALU.AND(self.A, self.L)
+		elif opcode == "A6":	#AND A,(HL)
+			self.A = self.ALU.AND(self.A, self.read(self.HL))
+		elif opcode == "E6":	#AND A,n
+			self.A = self.ALU.AND(self.A, self.fetch())
+		elif opcode == "B7":	#OR A,A
+			self.A = self.ALU.OR(self.A, self.A)
+		elif opcode == "B0":	#OR A,B
+			self.A = self.ALU.OR(self.A, self.B)
+		elif opcode == "B1":	#OR A,C
+			self.A = self.ALU.OR(self.A, self.C)
+		elif opcode == "B2":	#OR A,D
+			self.A = self.ALU.OR(self.A, self.D)
+		elif opcode == "B3":	#OR A,E
+			self.A = self.ALU.OR(self.A, self.E)
+		elif opcode == "B4":	#OR A,H
+			self.A = self.ALU.OR(self.A, self.H)
+		elif opcode == "B5":	#OR A,L
+			self.A = self.ALU.OR(self.A, self.L)
+		elif opcode == "B6":	#OR A,(HL)
+			self.A = self.ALU.OR(self.A, self.read(self.HL))
+		elif opcode == "F6":	#OR A,n
+			self.A = self.ALU.OR(self.A, self.fetch())
+		elif opcode == "AF":	#XOR A,A
+			self.A = self.ALU.XOR(self.A, self.A)
+		elif opcode == "A8":	#XOR A,B
+			self.A = self.ALU.XOR(self.A, self.B)
+		elif opcode == "A9":	#XOR A,C
+			self.A = self.ALU.XOR(self.A, self.C)
+		elif opcode == "AA":	#XOR A,D
+			self.A = self.ALU.XOR(self.A, self.D)
+		elif opcode == "AB":	#XOR A,E
+			self.A = self.ALU.XOR(self.A, self.E)
+		elif opcode == "AC":	#XOR A,H
+			self.A = self.ALU.XOR(self.A, self.H)
+		elif opcode == "AD":	#XOR A,L
+			self.A = self.ALU.XOR(self.A, self.L)
+		elif opcode == "AE":	#XOR A,(HL)
+			self.A = self.ALU.XOR(self.A, self.read(self.HL))
+		elif opcode == "EE":	#XOR A,n
+			self.A = self.ALU.XOR(self.A, self.fetch())
+		elif opcode == "BF":	#CP A,A
+			self.ALU.CP(self.A, self.A)
+		elif opcode == "B8":	#CP A,B
+			self.ALU.CP(self.A, self.B)
+		elif opcode == "B9":	#CP A,C
+			self.ALU.CP(self.A, self.C)
+		elif opcode == "BA":	#CP A,D
+			self.ALU.CP(self.A, self.D)
+		elif opcode == "BB":	#CP A,E
+			self.ALU.CP(self.A, self.E)
+		elif opcode == "BC":	#CP A,H
+			self.ALU.CP(self.A, self.H)
+		elif opcode == "BD":	#CP A,L
+			self.ALU.CP(self.A, self.L)
+		elif opcode == "BE":	#CP A,(HL)
+			self.ALU.CP(self.A, self.read(self.HL))
+		elif opcode == "FE":	#CP A,n
+			self.ALU.CP(self.A, self.fetch())
+		elif opcode == "3C":	#INC A
+			self.A = self.ALU.INC(self.A)
+		elif opcode == "04":	#INC B
+			self.B = self.ALU.INC(self.B)
+		elif opcode == "0C":	#INC C
+			self.C = self.ALU.INC(self.C)
+		elif opcode == "14":	#INC D
+			self.D = self.ALU.INC(self.D)
+		elif opcode == "1C":	#INC E
+			self.E = self.ALU.INC(self.E)
+		elif opcode == "24":	#INC H
+			self.H = self.ALU.INC(self.H)
+		elif opcode == "2C":	#INC L
+			self.L = self.ALU.INC(self.L)
+		elif opcode == "34":	#INC (HL)
+			self.write(self.read(self.HL), self.ALU.INC(self.read(self.HL)))
+		elif opcode == "3D":	#DEC A
+			self.A = self.ALU.DEC(self.A)
+		elif opcode == "05":	#DEC B
+			self.B = self.ALU.DEC(self.B)
+		elif opcode == "0D":	#DEC C
+			self.C = self.ALU.DEC(self.C)
+		elif opcode == "15":	#DEC D
+			self.D = self.ALU.DEC(self.D)
+		elif opcode == "1D":	#DEC E
+			self.E = self.ALU.DEC(self.E)
+		elif opcode == "25":	#DEC H
+			self.H = self.ALU.DEC(self.H)
+		elif opcode == "2D":	#DEC L
+			self.L = self.ALU.DEC(self.L)
+		elif opcode == "35":	#DEC (HL)
+			self.write(self.read(self.HL), self.ALU.DEC(self.read(self.HL)))
 			pass
 
 	def debug(self):
