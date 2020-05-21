@@ -114,27 +114,6 @@ class ALU():
 	def DEC(self, x):
 		return self.sub(x, Bin.fromDecimal(1))
 
-	'''
-	def INC(self, x):
-		self.F[6] = 0 
-		if isinstance(x, Bin16):
-			checks = [11]
-			l = 16
-			y = Bin16.fromDecimal(1)
-		else:
-			checks = [3]
-			l = 8
-			y = Bin.fromDecimal(1)
-		for i in range(l):
-			temp[i], c = Bin.fullAdder(a[i], b[i], c)
-			if i == checks[0]:
-				self.F[5] = c
-			if i == checks[1]:
-				self.F[4] = c
-		self.F[7] = 1 if temp.toDecimal() == 0 else 0
-		return  temp
-	'''
-
 class CPU():
 	programCounter = Bin16.fromHex("0100")
 	stackPointer = Bin16.fromHex("FFFE")
