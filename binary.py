@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-
 class Bin():
 	def __init__(self, value=None):
 		self.array = [0,0,0,0,0,0,0,0]
@@ -55,6 +54,18 @@ class Bin():
 			self.array.pop()
 			self.array.insert(0, 0)
 		return self
+
+	def __gt__(self, a):
+		return self.toDecimal() > a.toDecimal()
+
+	def __lt__(self, a):
+		return self.__gt__(a, self)
+
+	def __ge__(self, a):
+		return self.toDecimal() >= a.toDecimal()
+	
+	def __le__(self, a):
+		return self.__ge__(a, self)
 
 	def __add__(self, other):
 		if type(other) == int:

@@ -24,65 +24,55 @@ class ALU():
 	def __getattribute__(self, name):
 		return super().__getattribute__(name)
 
-	def overflowing_add(self, a, b, c=0):
-		self.F[6] = 0 
-		temp = Bin16() if isinstance(a, Bin16) else Bin()
-		checks = [11,15] if isinstance(a, Bin16) else [3,7]
-		for i in range(checks[1]+1):
+						#[7,6,5,4]		#[7,6,5,4]
+	def flagUpdate(self, flagsToAffect, flags):
+		for i in range(4):
+			if flagsToAffect[i]:
+				self.F[7-i] = flags[i]
+
+	def add(self, a, b, flagsToAffect, c=0):
+		flagRegister = [0,0,0,0]
+		n, temp, half, carry = 8, Bin(), 3, 7
+		if isinstance(a, Bin16) or isinstance(b, Bin16):
+			n, temp, half, carry = 16, Bin16(), 11, 15
+		for i in range(8):
 			temp[i], c = Bin.fullAdder(a[i], b[i], c)
-			if i == checks[0]:
-				self.F[5] = c
-			if i == checks[1]:
-				self.F[4] = c
-		self.F[7] = 1 if temp.toDecimal() == 0 else 0
-		return  temp
+			if i == half:
+				flagRegister[2] = c
+			elif i == carry:
+				flagRegister[3] = c
+		if temp.toDecimal() == 0:
+			flagRegister[0] = 1
+		self.flagUpdate(flagsToAffect, flagRegister)
+		return temp
 
-	def add(self, a, b, c=0):
-		self.F[6] = 0 
-		temp = Bin16() if isinstance(a, Bin16) else Bin()
-		checks = [11,15] if isinstance(a, Bin16) else [3,7]
-		for i in range(checks[1]+1):
-			temp[i], c = Bin.fullAdder(a[i], b[i], c)
-			if i == checks[0]:
-				self.F[5] = c
-		self.F[7] = 1 if temp.toDecimal() == 0 else 0
-		return  temp
-
-	def underflowing_sub(self, a, b, B=0):
-		self.F[6] = 1
-		temp = Bin16() if isinstance(a, Bin16) else Bin()
-		checks = [11,15] if isinstance(a, Bin16) else [3,7]
-		for i in range(checks[1]+1):
+	def sub(self, a, b, flagsToAffect, B=0):
+		flagRegister = [0,1,0,0]
+		n, temp, half, carry = 8, Bin(), 3, 7
+		if isinstance(a, Bin16) or isinstance(b, Bin16):
+			n, temp, half, carry = 16, Bin16(), 11, 15
+		for i in range(8):
 			temp[i], B = Bin.fullSubber(a[i], b[i], B)
-			if i == checks[0]:
-				self.F[5] = B
-			if i == checks[1]:
-				self.F[4] = B
-		self.F[7] = 1 if temp.toDecimal() == 0 else 0
-		return  temp
-
-	def sub(self, a, b, B=0):
-		self.F[6] = 1
-		temp = Bin16() if isinstance(a, Bin16) else Bin()
-		checks = [11,15] if isinstance(a, Bin16) else [3,7]
-		for i in range(checks[1]+1):
-			temp[i], B = Bin.fullSubber(a[i], b[i], B)
-			if i == checks[0]:
-				self.F[5] = B
-		self.F[7] = 1 if temp.toDecimal() == 0 else 0
-		return  temp
+			if i == half:
+				flagRegister[2] = B
+			elif i == carry:
+				flagRegister[3] = B
+		if temp.toDecimal() == 0:
+			flagRegister[0] = 1
+		self.flagUpdate(flagsToAffect, flagRegister)
+		return temp
 
 	def ADD(self, x, y):	#ADD x,y
-		return self.overflowing_add(x, y)
+		return self.add(x, y, [1,1,1,1])
 
 	def ADC(self, x, y):	#ADC x,y
-		return self.overflowing_add(x, y, self.F[4])
+		return self.add(x, y, [1,1,1,1], self.F[4])
 
 	def SUB(self, x, y):	#SUB x,y
-		return self.underflowing_sub(x, y)
+		return self.sub(x, y, [1,1,1,1])
 
 	def SBC(self, x, y):	#SBC x,y
-		return self.underflowing_sub(x, y, self.F[4])
+		return self.sub(x, y, [1,1,1,1], self.F[4])
 
 	def AND(self, x, y):
 		self.F[7] = 1 if  x & y == Bin("00000000") else 0
@@ -109,10 +99,56 @@ class ALU():
 		self.SUB(x, y)
 
 	def INC(self, x):
-		return self.add(x, Bin.fromDecimal(1))
+		if isinstance(x, Bin16):
+			return self.add(x, Bin.fromDecimal(1), [0,0,0,0])
+		return self.add(x, Bin.fromDecimal(1), [1,1,1,0])
 
 	def DEC(self, x):
-		return self.sub(x, Bin.fromDecimal(1))
+		if isinstance(x, Bin16):
+			return self.sub(x, Bin.fromDecimal(1), [0,0,0,0])
+		return self.sub(x, Bin.fromDecimal(1), [1,1,1,0])
+
+	def ADD_HL(self, x, y):
+		return self.add(x, y, [0,1,1,1])
+	
+	def ADD_SP(self, x, y):
+		a = self.add(x, y, [0,1,1,1])
+		self.F[7] = 0
+		return a
+
+	def SWAP(self, x):
+		temp = Bin()
+		for i in range(4):
+			temp[7-i] = x[3-i]
+			temp[4-i] = x[7-i]
+		if temp.toDecimal() == 0:
+			self.F[7] = 0
+		self.F[6] = self.F[5] = self.F[4] = 0
+		return temp
+
+	def DAA(self, x):
+		if self.F[6]:
+			if self.F[4] or x > Bin("99"):
+				x = x + Bin("60")
+				self.F[4] = 1
+			if self.F[5] or (x & Bin("0F") > Bin("09")):
+				x = x + Bin("06")
+		else:
+			if self.F[4]:
+				x = x - Bin("60")
+			if self.F[5]:
+				x = x - Bin("06")
+		self.F[7] = 1 if x == Bin("00000000") else 0
+		self.F[5] = 0
+		return x
+
+	def CCF(self):
+		self.F[6] = self.F[5] = 0
+		self.F[4] = 0 if self.F[4] else 1
+
+	def SCF(self):
+		self.F[4] = 1
+		self.F[6] = self.F[5] = 0
 
 class CPU():
 	programCounter = Bin16.fromHex("0100")
@@ -600,7 +636,665 @@ class CPU():
 			self.L = self.ALU.DEC(self.L)
 		elif opcode == "35":	#DEC (HL)
 			self.write(self.read(self.HL), self.ALU.DEC(self.read(self.HL)))
+		#16 bit arithmetic
+		elif opcode == "09":	#ADD HL, BC
+			self.HL = self.ALU.ADD_HL(self.HL, self.BC)
+		elif opcode == "19":	#ADD HL, DE
+			self.HL = self.ALU.ADD_HL(self.HL, self.DE)
+		elif opcode == "29":	#ADD HL, HL
+			self.HL = self.ALU.ADD_HL(self.HL, self.HL)
+		elif opcode == "39":	#ADD HL, SP
+			self.HL = self.ALU.ADD_HL(self.HL, self.stackPointer)
+		elif opcode == "E8":	#ADD SP,#
+			self.stackPointer = self.ALU.ADD_SP(self.stackPointer, self.fetch())
+		elif opcode == "03":	#INC BC
+			self.BC = self.ALU.INC(self.BC)
+		elif opcode == "13":	#INC DE
+			self.DE = self.ALU.INC(self.DE)
+		elif opcode == "23":	#INC HL
+			self.HL = self.ALU.INC(self.HL)
+		elif opcode == "33":	#INC SP
+			self.stackPointer = self.ALU.INC(self.stackPointer)
+		elif opcode == "0B":	#DEC BC
+			self.BC = self.ALU.DEC(self.BC)
+		elif opcode == "1B":	#DEC DE
+			self.DE = self.ALU.DEC(self.BC)
+		elif opcode == "2B":	#DEC HL
+			self.HL = self.ALU.DEC(self.BC)
+		elif opcode == "3B":	#DEC SP
+			self.stackPointer = self.ALU.DEC(self.stackPointer)
+		#MISC
+		elif opcode == "27":	#DAA
+			self.A = self.ALU.DAA(self.A)
+		elif opcode == "3F":	#CCF
+			self.ALU.CCF()
+		elif opcode == "37":	#SCF
+			self.ALU.SCF()
+		elif opcode == "00":	#NOP
 			pass
+		elif opcode == "76":	#HALT CPU TODO
+			pass
+		elif opcode == "10":	#HALT CPU AND LCD TODO
+			if self.fetch() == "00":
+				pass
+		elif opcode == "F3":	#DI	TODO
+			pass
+		elif opcode == "FB":	#EI TODO
+			pass
+		#rotates and shifts
+		elif opcode == "07":	#RLCA
+			a = self.A[7]
+			self.A = self.A << 1
+			self.A[0] = a
+			self.F[4] = a
+			self.F[7] = self.F[6] = self.F[5] = 0
+		elif opcode == "17":	#RLA
+			a = self.A[7]
+			self.A = self.A << 1
+			self.A[0] = self.F[4]
+			self.F[4] = a
+			self.F[7] = self.F[6] = self.F[5] = 0
+		elif opcode == "0F":	#RRCA
+			a = self.A[0]
+			self.A = self.A >> 1
+			self.A[7] = a
+			self.F[4] = a
+			self.F[7] = self.F[6] = self.F[5] = 0
+		elif opcode == "1F":	#RRA
+			a = self.A[0]
+			self.A = self.A >> 1
+			self.A[7] = self.F[4]
+			self.F[4] = a
+			self.F[7] = self.F[6] = self.F[5] = 0
+		elif opcode == "CB":
+			arg = self.fetch()
+			#MISC
+			if arg == "37":			#SWAP A
+				self.A = self.ALU.SWAP(self.A)
+			elif arg == "30":		#SWAP B
+				self.B = self.ALU.SWAP(self.B)
+			elif arg == "31":		#SWAP C
+				self.C = self.ALU.SWAP(self.C)
+			elif arg == "32":		#SWAP D
+				self.D = self.ALU.SWAP(self.D)
+			elif arg == "33":		#SWAP E
+				self.E = self.ALU.SWAP(self.E)
+			elif arg == "34":		#SWAP H
+				self.H = self.ALU.SWAP(self.H)
+			elif arg == "35":		#SWAP L
+				self.L = self.ALU.SWAP(self.L)
+			elif arg == "36":		#SWAP (HL)
+				add = self.fetch()
+				self.write(add, self.ALU.SWAP(add))
+			#rotates and shit
+			elif arg == "07":		#RLC A
+				self.RLC(self.A)
+			elif arg == "00":		#RLC B
+				self.RLC(self.B)
+			elif arg == "01":		#RLC C
+				self.RLC(self.C)
+			elif arg == "02":		#RLC D
+				self.RLC(self.D)
+			elif arg == "03":		#RLC E
+				self.RLC(self.E)
+			elif arg == "04":		#RLC H
+				self.RLC(self.H)
+			elif arg == "05":		#RLC L
+				self.RLC(self.L)
+			elif arg == "06":		#RLC (HL)
+				self.write(self.HL, self.RLC(self.read(self.HL)))
+			elif arg == "17":		#RL A
+				self.RL(self.A)
+			elif arg == "10":		#RL B
+				self.RL(self.B)
+			elif arg == "11":		#RL C
+				self.RL(self.C)
+			elif arg == "12":		#RL D
+				self.RL(self.D)
+			elif arg == "13":		#RL E
+				self.RL(self.E)
+			elif arg == "14":		#RL H
+				self.RL(self.H)
+			elif arg == "15":		#RL L
+				self.RL(self.L)
+			elif arg == "16":		#RL (HL)
+				self.write(self.HL, self.RL(self.read(self.HL)))
+			elif arg == "0F":		#RRC A
+				self.RRC(self.A)
+			elif arg == "08":		#RRC B
+				self.RRC(self.B)
+			elif arg == "09":		#RRC C
+				self.RRC(self.C)
+			elif arg == "0A":		#RRC D
+				self.RRC(self.D)
+			elif arg == "0B":		#RRC E
+				self.RRC(self.E)
+			elif arg == "0C":		#RRC H
+				self.RRC(self.H)
+			elif arg == "0D":		#RRC L
+				self.RRC(self.L)
+			elif arg == "0E":		#RRC (HL)
+				self.write(self.HL, self.RRC(self.read(self.HL)))
+			elif arg == "1F":		#RR A
+				self.RR(self.A)
+			elif arg == "18":		#RR B
+				self.RR(self.B)
+			elif arg == "19":		#RR C
+				self.RR(self.C)
+			elif arg == "1A":		#RR D
+				self.RR(self.D)
+			elif arg == "1B":		#RR E
+				self.RR(self.E)
+			elif arg == "1C":		#RR H
+				self.RR(self.H)
+			elif arg == "1D":		#RR L
+				self.RR(self.L)
+			elif arg == "1E":		#RR (HL)
+				self.write(self.HL, self.RR(self.read(self.HL)))
+			elif arg == "27":		#SLA A
+				self.SLA(self.A)
+			elif arg == "20":		#SLA B
+				self.SLA(self.B)
+			elif arg == "21":		#SLA C
+				self.SLA(self.C)
+			elif arg == "22":		#SLA D
+				self.SLA(self.D)
+			elif arg == "23":		#SLA E
+				self.SLA(self.E)
+			elif arg == "24":		#SLA H
+				self.SLA(self.H)
+			elif arg == "25":		#SLA L
+				self.SLA(self.L)
+			elif arg == "26":		#SLA (HL)
+				self.write(self.HL, self.SLA(self.read(self.HL)))
+			elif arg == "2F":		#SRA A
+				self.SRA(self.A)
+			elif arg == "28":		#SRA B
+				self.SRA(self.B)
+			elif arg == "29":		#SRA C
+				self.SRA(self.C)
+			elif arg == "2A":		#SRA D
+				self.SRA(self.D)
+			elif arg == "2B":		#SRA E
+				self.SRA(self.E)
+			elif arg == "2C":		#SRA H
+				self.SRA(self.H)
+			elif arg == "2D":		#SRA L
+				self.SRA(self.L)
+			elif arg == "2E":		#SRA (HL)
+				self.write(self.HL, self.SRA(self.read(self.HL)))
+			elif arg == "3F":		#SRL A
+				self.SRL(self.A)
+			elif arg == "38":		#SRL B
+				self.SRL(self.B)
+			elif arg == "39":		#SRL C
+				self.SRL(self.C)
+			elif arg == "3A":		#SRL D
+				self.SRL(self.D)
+			elif arg == "3B":		#SRL E
+				self.SRL(self.E)
+			elif arg == "3C":		#SRL H
+				self.SRL(self.H)
+			elif arg == "3D":		#SRL L
+				self.SRL(self.L)
+			elif arg == "3E":		#SRL (HL)
+				self.write(self.HL, self.SRL(self.read(self.HL)))
+			#BIT STUFF
+			elif arg == "40":		#BIT 0,B
+				self.BIT(0, self.B)
+			elif arg == "41":		#BIT 0,C
+				self.BIT(0, self.C)
+			elif arg == "42":		#BIT 0,D
+				self.BIT(0, self.D)
+			elif arg == "43":		#BIT 0,E
+				self.BIT(0, self.E)
+			elif arg == "44":		#BIT 0,H
+				self.BIT(0, self.H)
+			elif arg == "45":		#BIT 0,L
+				self.BIT(0, self.L)
+			elif arg == "46":		#BIT 0,(HL)
+				self.BIT(0, self.read(self.HL))
+			elif arg == "47":		#BIT 0,A
+				self.BIT(0, self.A)
+			elif arg == "48":		#BIT 1,B
+				self.BIT(1, self.B)
+			elif arg == "49":		#BIT 1,C
+				self.BIT(1, self.C)
+			elif arg == "4A":		#BIT 1,D
+				self.BIT(1, self.D)
+			elif arg == "4B":		#BIT 1,E
+				self.BIT(1, self.E)
+			elif arg == "4C":		#BIT 1,H
+				self.BIT(1, self.H)
+			elif arg == "4D":		#BIT 1,L
+				self.BIT(1, self.L)
+			elif arg == "4E":		#BIT 1,(HL)
+				self.BIT(1, self.read(self.HL))
+			elif arg == "4F":		#BIT 1,A
+				self.BIT(1, self.A)
+			elif arg == "50":		#BIT 2,B
+				self.BIT(2, self.B)
+			elif arg == "51":		#BIT 2,C
+				self.BIT(2, self.C)
+			elif arg == "52":		#BIT 2,D
+				self.BIT(2, self.D)
+			elif arg == "53":		#BIT 2,E
+				self.BIT(2, self.E)
+			elif arg == "54":		#BIT 2,H
+				self.BIT(2, self.H)
+			elif arg == "55":		#BIT 2,L
+				self.BIT(2, self.L)
+			elif arg == "56":		#BIT 2,(HL)
+				self.BIT(2, self.read(self.HL))
+			elif arg == "57":		#BIT 2,A
+				self.BIT(2, self.A)
+			elif arg == "58":		#BIT 3,B
+				self.BIT(3, self.B)
+			elif arg == "59":		#BIT 3,C
+				self.BIT(3, self.C)
+			elif arg == "5A":		#BIT 3,D
+				self.BIT(3, self.D)
+			elif arg == "5B":		#BIT 3,E
+				self.BIT(3, self.E)
+			elif arg == "5C":		#BIT 3,H
+				self.BIT(3, self.H)
+			elif arg == "5D":		#BIT 3,L
+				self.BIT(3, self.L)
+			elif arg == "5E":		#BIT 3,(HL)
+				self.BIT(3, self.read(self.HL))
+			elif arg == "5F":		#BIT 3,A
+				self.BIT(3, self.A)
+			elif arg == "60":		#BIT 4,B
+				self.BIT(4, self.B)
+			elif arg == "61":		#BIT 4,C
+				self.BIT(4, self.C)
+			elif arg == "62":		#BIT 4,D
+				self.BIT(4, self.D)
+			elif arg == "63":		#BIT 4,E
+				self.BIT(4, self.E)
+			elif arg == "64":		#BIT 4,H
+				self.BIT(4, self.H)
+			elif arg == "65":		#BIT 4,L
+				self.BIT(4, self.L)
+			elif arg == "66":		#BIT 4,(HL)
+				self.BIT(4, self.read(self.HL))
+			elif arg == "67":		#BIT 4,A
+				self.BIT(4, self.A)
+			elif arg == "68":		#BIT 5,B
+				self.BIT(5, self.B)
+			elif arg == "69":		#BIT 5,C
+				self.BIT(5, self.C)
+			elif arg == "6A":		#BIT 5,D
+				self.BIT(5, self.D)
+			elif arg == "6B":		#BIT 5,E
+				self.BIT(5, self.E)
+			elif arg == "6C":		#BIT 5,H
+				self.BIT(5, self.H)
+			elif arg == "6D":		#BIT 5,L
+				self.BIT(5, self.L)
+			elif arg == "6E":		#BIT 5,(HL)
+				self.BIT(5, self.read(self.HL))
+			elif arg == "6F":		#BIT 6,A
+				self.BIT(6, self.A)
+			elif arg == "70":		#BIT 6,B
+				self.BIT(6, self.B)
+			elif arg == "71":		#BIT 6,C
+				self.BIT(6, self.C)
+			elif arg == "72":		#BIT 6,D
+				self.BIT(6, self.D)
+			elif arg == "73":		#BIT 6,E
+				self.BIT(6, self.E)
+			elif arg == "74":		#BIT 6,H
+				self.BIT(6, self.H)
+			elif arg == "75":		#BIT 6,L
+				self.BIT(6, self.L)
+			elif arg == "76":		#BIT 6,(HL)
+				self.BIT(6, self.read(self.HL))
+			elif arg == "77":		#BIT 6,A
+				self.BIT(6, self.A)
+			elif arg == "78":		#BIT 7,B
+				self.BIT(7, self.B)
+			elif arg == "79":		#BIT 7,C
+				self.BIT(7, self.C)
+			elif arg == "7A":		#BIT 7,D
+				self.BIT(7, self.D)
+			elif arg == "7B":		#BIT 7,E
+				self.BIT(7, self.E)
+			elif arg == "7C":		#BIT 7,H
+				self.BIT(7, self.H)
+			elif arg == "7D":		#BIT 7,L
+				self.BIT(7, self.L)
+			elif arg == "7E":		#BIT 7,(HL)
+				self.BIT(7, self.read(self.HL))
+			elif arg == "7F":		#BIT 7,A
+				self.BIT(7, self.A)
+			elif arg == "80":		#RES 0,B
+				self.RES(0, self.B)
+			elif arg == "81":		#RES 0,C
+				self.RES(0, self.C)
+			elif arg == "82":		#RES 0,D
+				self.RES(0, self.D)
+			elif arg == "83":		#RES 0,E
+				self.RES(0, self.E)
+			elif arg == "84":		#RES 0,H
+				self.RES(0, self.H)
+			elif arg == "85":		#RES 0,L
+				self.RES(0, self.L)
+			elif arg == "86":		#RES 0,(HL)
+				self.write(self.HL, self.RES(0, self.read(self.HL)))
+			elif arg == "87":		#RES 0,A
+				self.RES(0, self.A)
+			elif arg == "88":		#RES 1,B
+				self.RES(1, self.B)
+			elif arg == "89":		#RES 1,C
+				self.RES(1, self.C)
+			elif arg == "8A":		#RES 1,D
+				self.RES(1, self.D)
+			elif arg == "8B":		#RES 1,E
+				self.RES(1, self.E)
+			elif arg == "8C":		#RES 1,H
+				self.RES(1, self.H)
+			elif arg == "8D":		#RES 1,L
+				self.RES(1, self.L)
+			elif arg == "8E":		#RES 1,HL
+				self.write(self.HL, self.RES(1, self.read(self.HL)))
+			elif arg == "8F":		#RES 1,A
+				self.RES(1, self.A)
+			elif arg == "90":		#RES 2,B
+				self.RES(2, self.B)
+			elif arg == "91":		#RES 2,C
+				self.RES(2, self.C)
+			elif arg == "92":		#RES 2,D
+				self.RES(2, self.D)
+			elif arg == "93":		#RES 2,E
+				self.RES(2, self.E)
+			elif arg == "94":		#RES 2,H
+				self.RES(2, self.H)
+			elif arg == "95":		#RES 2,L
+				self.RES(2, self.L)
+			elif arg == "96":		#RES 2,(HL)
+				self.write(self.HL, self.RES(2, self.read(self.HL)))
+			elif arg == "97":		#RES 2,A
+				self.RES(2, self.A)
+			elif arg == "98":		#RES 3,B
+				self.RES(3, self.B)
+			elif arg == "99":		#RES 3,C
+				self.RES(3, self.C)
+			elif arg == "9A":		#RES 3,D
+				self.RES(3, self.D)
+			elif arg == "9B":		#RES 3,E
+				self.RES(3, self.E)
+			elif arg == "9C":		#RES 3,H
+				self.RES(3, self.H)
+			elif arg == "9D":		#RES 3,L
+				self.RES(3, self.L)
+			elif arg == "9E":		#RES 3,HL
+				self.write(self.HL, self.RES(3, self.read(self.HL)))
+			elif arg == "9F":		#RES 3,A
+				self.RES(3, self.A)
+			elif arg == "A0":		#RES 4,B
+				self.RES(4, self.B)
+			elif arg == "A1":		#RES 4,C
+				self.RES(4, self.C)
+			elif arg == "A2":		#RES 4,D
+				self.RES(4, self.D)
+			elif arg == "A3":		#RES 4,E
+				self.RES(4, self.E)
+			elif arg == "A4":		#RES 4,H
+				self.RES(4, self.H)
+			elif arg == "A5":		#RES 4,L
+				self.RES(4, self.L)
+			elif arg == "A6":		#RES 4,(HL)
+				self.write(self.HL, self.RES(4, self.read(self.HL)))
+			elif arg == "A7":		#RES 4,A
+				self.RES(4, self.A)
+			elif arg == "A8":		#RES 5,B
+				self.RES(5, self.B)
+			elif arg == "A9":		#RES 5,C
+				self.RES(5, self.C)
+			elif arg == "AA":		#RES 5,D
+				self.RES(5, self.D)
+			elif arg == "AB":		#RES 5,E
+				self.RES(5, self.E)
+			elif arg == "AC":		#RES 5,H
+				self.RES(5, self.H)
+			elif arg == "AD":		#RES 5,L
+				self.RES(5, self.L)
+			elif arg == "AE":		#RES 5,HL
+				self.write(self.HL, self.RES(5, self.read(self.HL)))
+			elif arg == "AF":		#RES 5,A
+				self.RES(5, self.A)
+			elif arg == "B0":		#RES 6,B
+				self.RES(6, self.B)
+			elif arg == "B1":		#RES 6,C
+				self.RES(6, self.C)
+			elif arg == "B2":		#RES 6,D
+				self.RES(6, self.D)
+			elif arg == "B3":		#RES 6,E
+				self.RES(6, self.E)
+			elif arg == "B4":		#RES 6,H
+				self.RES(6, self.H)
+			elif arg == "B5":		#RES 6,L
+				self.RES(6, self.L)
+			elif arg == "B6":		#RES 6,(HL)
+				self.write(self.HL, self.RES(6, self.read(self.HL)))
+			elif arg == "B7":		#RES 6,A
+				self.RES(6, self.A)
+			elif arg == "B8":		#RES 7,B
+				self.RES(7, self.B)
+			elif arg == "B9":		#RES 7,C
+				self.RES(7, self.C)
+			elif arg == "BA":		#RES 7,D
+				self.RES(7, self.D)
+			elif arg == "BB":		#RES 7,E
+				self.RES(7, self.E)
+			elif arg == "BC":		#RES 7,H
+				self.RES(7, self.H)
+			elif arg == "BD":		#RES 7,L
+				self.RES(7, self.L)
+			elif arg == "BE":		#RES 7,HL
+				self.write(self.HL, self.RES(7, self.read(self.HL)))
+			elif arg == "BF":		#RES 7,A
+				self.RES(7, self.A)
+			elif arg == "C0":		#SET 0,B
+				self.SET(0, self.B)
+			elif arg == "C1":		#SET 0,C
+				self.SET(0, self.C)
+			elif arg == "C2":		#SET 0,D
+				self.SET(0, self.D)
+			elif arg == "C3":		#SET 0,E
+				self.SET(0, self.E)
+			elif arg == "C4":		#SET 0,H
+				self.SET(0, self.H)
+			elif arg == "C5":		#SET 0,L
+				self.SET(0, self.L)
+			elif arg == "C6":		#SET 0,(HL)
+				self.write(self.HL, self.SET(0, self.read(self.HL)))
+			elif arg == "C7":		#SET 0,A
+				self.SET(0, self.A)
+			elif arg == "C8":		#SET 1,B
+				self.SET(1, self.B)
+			elif arg == "C9":		#SET 1,C
+				self.SET(1, self.C)
+			elif arg == "CA":		#SET 1,D
+				self.SET(1, self.D)
+			elif arg == "CB":		#SET 1,E
+				self.SET(1, self.E)
+			elif arg == "CC":		#SET 1,H
+				self.SET(1, self.H)
+			elif arg == "CD":		#SET 1,L
+				self.SET(1, self.L)
+			elif arg == "CE":		#SET 1,(HL)
+				self.write(self.HL, self.SET(1, self.read(self.HL)))
+			elif arg == "CF":		#SET 1,A
+				self.SET(1, self.A)
+			elif arg == "D0":		#SET 2,B
+				self.SET(2, self.B)
+			elif arg == "D1":		#SET 2,C
+				self.SET(2, self.C)
+			elif arg == "D2":		#SET 2,D
+				self.SET(2, self.D)
+			elif arg == "D3":		#SET 2,E
+				self.SET(2, self.E)
+			elif arg == "D4":		#SET 2,H
+				self.SET(2, self.H)
+			elif arg == "D5":		#SET 2,L
+				self.SET(2, self.L)
+			elif arg == "D6":		#SET 2,(HL)
+				self.write(self.HL, self.SET(2, self.read(self.HL)))
+			elif arg == "D7":		#SET 2,A
+				self.SET(2, self.A)
+			elif arg == "D8":		#SET 3,B
+				self.SET(3, self.B)
+			elif arg == "D9":		#SET 3,C
+				self.SET(3, self.C)
+			elif arg == "DA":		#SET 3,D
+				self.SET(3, self.D)
+			elif arg == "DB":		#SET 3,E
+				self.SET(3, self.E)
+			elif arg == "DC":		#SET 3,H
+				self.SET(3, self.H)
+			elif arg == "DD":		#SET 3,L
+				self.SET(3, self.L)
+			elif arg == "DE":		#SET 3,(HL)
+				self.write(self.HL, self.SET(3, self.read(self.HL)))
+			elif arg == "DF":		#SET 3,A
+				self.SET(3, self.A)
+			elif arg == "E0":		#SET 4,B
+				self.SET(4, self.B)
+			elif arg == "E1":		#SET 4,C
+				self.SET(4, self.C)
+			elif arg == "E2":		#SET 4,D
+				self.SET(4, self.D)
+			elif arg == "E3":		#SET 4,E
+				self.SET(4, self.E)
+			elif arg == "E4":		#SET 4,H
+				self.SET(4, self.H)
+			elif arg == "E5":		#SET 4,L
+				self.SET(4, self.L)
+			elif arg == "E6":		#SET 4,(HL)
+				self.write(self.HL, self.SET(4, self.read(self.HL)))
+			elif arg == "E7":		#SET 4,A
+				self.SET(4, self.A)
+			elif arg == "E8":		#SET 5,B
+				self.SET(5, self.B)
+			elif arg == "E9":		#SET 5,C
+				self.SET(5, self.C)
+			elif arg == "EA":		#SET 5,D
+				self.SET(5, self.D)
+			elif arg == "EB":		#SET 5,E
+				self.SET(5, self.E)
+			elif arg == "EC":		#SET 5,H
+				self.SET(5, self.H)
+			elif arg == "ED":		#SET 5,L
+				self.SET(5, self.L)
+			elif arg == "EE":		#SET 5,(HL)
+				self.write(self.HL, self.SET(5, self.read(self.HL)))
+			elif arg == "EF":		#SET 5,A
+				self.SET(5, self.A)
+			elif arg == "F0":		#SET 6,B
+				self.SET(6, self.B)
+			elif arg == "F1":		#SET 6,C
+				self.SET(6, self.C)
+			elif arg == "F2":		#SET 6,D
+				self.SET(6, self.D)
+			elif arg == "F3":		#SET 6,E
+				self.SET(6, self.E)
+			elif arg == "F4":		#SET 6,H
+				self.SET(6, self.H)
+			elif arg == "F5":		#SET 6,L
+				self.SET(6, self.L)
+			elif arg == "F6":		#SET 6,(HL)
+				self.write(self.HL, self.SET(6, self.read(self.HL)))
+			elif arg == "F7":		#SET 6,A
+				self.SET(6, self.A)
+			elif arg == "F8":		#SET 7,B
+				self.SET(7, self.B)
+			elif arg == "F9":		#SET 7,C
+				self.SET(7, self.C)
+			elif arg == "FA":		#SET 7,D
+				self.SET(7, self.D)
+			elif arg == "FB":		#SET 7,E
+				self.SET(7, self.E)
+			elif arg == "FC":		#SET 7,H
+				self.SET(7, self.H)
+			elif arg == "FD":		#SET 7,L
+				self.SET(7, self.L)
+			elif arg == "FE":		#SET 7,(HL)
+				self.write(self.HL, self.SET(7, self.read(self.HL)))
+			elif arg == "FF":		#SET 7,A
+				self.SET(7, self.A)
+
+
+	def SET(self, b, reg):
+		reg[b] = 1
+		return reg
+
+	def	RES(self, b, reg):
+		reg[b] = 0
+		return reg
+	
+	def BIT(self, b, reg):
+		self.F[7] = 0 if reg[b] else 1
+		self.F[6] = 0
+		self.F[5] = 1
+	
+	def SRL(self, reg):
+		self.F[4] = reg[0]
+		reg = reg >> 1
+		self.F[7] = 1 if reg == Bin("00") else 0
+		self.F[6] = self.F[5] = 0
+		return reg
+
+	def SRA(self, reg):
+		a = reg[7]
+		self.F[4] = reg[0]
+		reg = reg >> 1
+		reg[7] = a
+		self.F[7] = 1 if reg == Bin("00") else 0
+		self.F[6] = self.F[5] = 0
+		return reg
+
+	def SLA(self, reg):
+		self.F[4] = reg[7]
+		reg = reg << 1
+		return reg
+
+	def RLC(self, reg):
+		a = reg[7]
+		reg = reg << 1
+		reg[0] = a
+		self.F[4] = a
+		self.F[7] = 1 if reg == Bin("00") else 0
+		self.F[6] = self.F[5] = 0
+		return reg
+
+	def RL(self, reg):
+		a = reg[7]
+		reg = reg << 1
+		reg[0] = self.F[4]
+		self.F[4] = a
+		self.F[7] = 1 if reg == Bin("00") else 0
+		self.F[6] = self.F[5] = 0
+		return reg
+
+	def RRC(self, reg):
+		a = reg[0]
+		reg = reg >> 1
+		reg[7] = a
+		self.F[4] = a
+		self.F[7] = 1 if reg == Bin("00") else 0
+		self.F[6] = self.F[5] = 0
+		return reg
+
+	def RR(self, reg):
+		a = reg[0]
+		reg = reg >> 1
+		reg[7] = self.F[4]
+		self.F[4] = a
+		self.F[7] = 1 if reg == Bin("00") else 0
+		self.F[6] = self.F[5] = 0
+		return reg
 
 	def debug(self):
 		while True:
