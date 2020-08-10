@@ -1,6 +1,5 @@
 from binary import Bin
 from binary import Bin16
-import numpy
 
 class Memory():
 	def __init__(self):
