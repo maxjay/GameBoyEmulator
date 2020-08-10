@@ -1,5 +1,5 @@
 *.pyc
-*.gb
+game.gb
 cpu_instrs
 *.prof
 *.dump
