@@ -1,3 +1,7 @@
 *.pyc
 *.gb
 cpu_instrs
+*.prof
+*.dump
+*.hex
+*.txt

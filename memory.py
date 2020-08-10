@@ -1,27 +1,25 @@
 from binary import Bin
 from binary import Bin16
+import numpy
 
 class Memory():
 	def __init__(self):
-		self.memory = [Bin()] * 65536
+		self.memory = [Bin() for i in range(65536)]
 
 	def __getitem__(self, key):
 		if isinstance(key, Bin16):
 			return self.memory[key.toDecimal()]
 		else:
-			return self.memory[key]
+			if isinstance(key, str):
+				return self.memory[Bin16.fromHex(key).toDecimal()]
+			else:
+				return self.memory[key]
 
 	def __setitem__(self, key, value):
 		if isinstance(key, Bin16):
-			self.memory[key.toDecimal()] = value
+			self.memory[key.toDecimal()].array = value.array
 		else:
-			self.memory[key] = value
-		return self.memory
-
-	def getROM(self):
-		temp = Memory()
-		temp.memory = self.memory[:32767+1]
-		return temp
+			self.memory[key].array = value.array
 
 	def load(self, file):
 		with open(file, "rb") as file:
@@ -32,6 +30,10 @@ class Memory():
 				self.memory[counter] = byte
 				counter += 1
 				byte = file.read(1)
+
+	def saveDump(self):
+		with open("dump.hex", "wb+") as file:
+			file.write(bytearray([i.toDecimal() for i in self.memory]))
 
 class MemoryBus(Memory):
 	def __init__(self, memory):

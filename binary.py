@@ -68,18 +68,15 @@ class Bin():
 		return self.__ge__(a, self)
 
 	def __add__(self, other):
+		a = self.toDecimal()
 		if type(other) == int:
-			other = Bin.fromDecimal(other)
+			a += other
 		elif type(other) == str:
 			if len(other) == 8:
-				other = Bin(other)
+				a += int(other, 2)
 			elif len(other) == 2:
-				other = Bin.fromHex(other)
-		temp = Bin()
-		C = 0
-		for i in range(8):
-			temp[i], C = self.fullAdder(self[i], other[i], C)
-		return temp
+				a += int(other, 16)
+		return Bin.fromDecimal(a)
 
 	def __sub__(self, other):
 		if type(other) == int:
@@ -93,28 +90,10 @@ class Bin():
 		return self.__add__(other)
 
 	def toDecimal(self):
-		return sum([2**i if self[i] == 1 else 0 for i in range(8)])
+		return int(self.__str__(), 2)
 
 	def toHex(self):
-		highNibble = Bin.toDecimal((self & Bin("11110000")) >> 4)
-		lowNibble =	Bin.toDecimal(self & Bin("00001111"))
-		hexString = ""
-		for i in [highNibble, lowNibble]:
-			if i == 10:
-				hexString += "A"
-			elif i == 11:
-				hexString += "B"
-			elif i == 12:
-				hexString += "C"
-			elif i == 13:
-				hexString += "D"
-			elif i == 14:
-				hexString += "E"
-			elif i == 15:
-				hexString += "F"
-			else:
-				hexString += str(i)
-		return hexString
+		return f'{self.toDecimal():02x}'.upper()
 
 	@staticmethod
 	def fullAdder(a, b, c=0):
@@ -162,25 +141,13 @@ class Bin():
 
 	@staticmethod
 	def fromDecimal(a):
-		flip = False
 		if a < 0:
-			flip = True
-			a = 0 - a
-		temp = Bin()
-		for i in range(8):
-			if 2**(7-i) <= a:
-				a -= 2**(7-i)
-				temp.array[i] = 1
-		if flip:
-			return ~temp + Bin("00000001")
-		return temp
+			a = 256+a
+		return Bin("{0:08b}".format(a))
 
 	@staticmethod
 	def fromHex(a):
-		temp = Bin()
-		highNibble = Bin.fromDecimal(int(a[0], 16)) << 4
-		lowNibble = Bin.fromDecimal(int(a[1], 16))
-		return highNibble | lowNibble
+		return Bin("{0:08b}".format(int(a, 16)))
 
 class Bin16():
 	def __init__(self, a=None, b=None):
@@ -263,7 +230,7 @@ class Bin16():
 
 	def __add__(self, other):
 		if type(other) == int:
-			other = Bin16.fromDecimal(other)
+			return Bin16.fromDecimal(self.toDecimal() + other)
 		elif type(other) == str:
 			if len(other) == 16:
 				other = Bin16(other)
@@ -289,11 +256,7 @@ class Bin16():
 		return self.__add__(other)
 
 	def toDecimal(self):
-		decArray = []
-		for i in self.array:
-			decArray.append(i.toDecimal())
-		decArray[0] = decArray[0] * 256
-		return sum(decArray)
+		return int(self.__str__(), 2)
 
 	def toHex(self):
 		hexString = ""
@@ -306,7 +269,9 @@ class Bin16():
 
 	@staticmethod
 	def fromDecimal(a):
-		return Bin16(Bin.fromDecimal(a//256), Bin.fromDecimal(a % 256))
+		if a < 0:
+			a = 65536+a
+		return Bin16("{0:016b}".format(a))
 
 	@staticmethod
 	def fromHex(a):
